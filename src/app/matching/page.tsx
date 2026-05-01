@@ -31,6 +31,7 @@ export default function MatchingPage() {
   const handleStart = async () => {
     const deliveryId = booking.id || crypto.randomUUID();
     
+    // Force Vercel Rebuild: 1
     try {
       await addDelivery({
         customerId: user?.id || '',
