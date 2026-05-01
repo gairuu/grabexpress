@@ -55,12 +55,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .single();
 
     if (error || !data) {
+      console.log('Profile missing or error fetching:', error?.message);
       // If profile is missing, try to create it from session data (important for OAuth)
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const name = session.user.user_metadata.full_name || session.user.user_metadata.name || 'User';
         const email = session.user.email || '';
         
+        console.log('Attempting to create profile for:', email);
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
           .insert({ id: userId, name, email, role: 'customer' })
@@ -68,10 +70,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           .single();
         
         if (insertError) {
-          console.error('Auto-profile creation failed:', insertError);
+          console.error('Auto-profile creation failed:', insertError.message);
           return null;
         }
         
+        console.log('Profile created successfully!');
         return {
           id: newProfile.id,
           name: newProfile.name,
