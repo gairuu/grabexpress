@@ -42,6 +42,7 @@ export default function MatchingPage() {
         status: 'pending',
         fee: booking.fee,
         paymentMethod: booking.paymentMethod,
+        createdAt: new Date().toISOString(),
         estimatedTime: '25 mins',
         senderName: booking.senderName,
         senderPhone: booking.senderPhone,
