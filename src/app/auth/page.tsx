@@ -16,8 +16,15 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
-  const { signUp, signIn, signInWithGoogle } = useApp();
+  const { signUp, signIn, signInWithGoogle, user, loading } = useApp();
   const router = useRouter();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !loading) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -12,9 +12,15 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // If we're still loading the session, do nothing yet
     if (loading) return;
+
     if (!user) {
-      router.push('/auth');
+      // Small delay to ensure session is truly missing
+      const timer = setTimeout(() => {
+        router.push('/auth');
+      }, 500);
+      return () => clearTimeout(timer);
     } else if (user.role === 'driver') {
       router.push('/driver');
     }
