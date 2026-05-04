@@ -29,11 +29,8 @@ export default function MatchingPage() {
   }, [booking.pickup, router, setBooking, loading]);
 
   const handleStart = async () => {
-    const deliveryId = booking.id || crypto.randomUUID();
-    
-    // Force Vercel Rebuild: 1
     try {
-      await addDelivery({
+      const newDeliveryId = await addDelivery({
         customerId: user?.id || '',
         customerName: user?.name || 'Unknown',
         driverId: booking.driver?.id || '',
@@ -55,7 +52,9 @@ export default function MatchingPage() {
         vehicleType: booking.vehicleType,
       });
       
-      router.push(`/tracking/${deliveryId}`);
+      // Update global booking state with the real DB id
+      setBooking({ id: newDeliveryId });
+      router.push(`/tracking/${newDeliveryId}`);
     } catch (err) {
       console.error('Failed to create delivery:', err);
     }

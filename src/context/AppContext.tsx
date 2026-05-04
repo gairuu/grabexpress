@@ -14,7 +14,8 @@ interface AppContextType {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   fetchDeliveries: () => Promise<void>;
-  addDelivery: (d: Omit<Delivery, 'id'>) => Promise<void>;
+  addDelivery: (d: Omit<Delivery, 'id'>) => Promise<string>;
+  updateDelivery: (deliveryId: string, updates: Partial<Delivery>) => Promise<void>;
   updateDeliveryStatus: (deliveryId: string, status: DeliveryStatus) => Promise<void>;
   setBooking: (b: Partial<BookingState>) => void;
   resetBooking: () => void;
@@ -253,7 +254,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const addDelivery = useCallback(async (d: Omit<Delivery, 'id'>) => {
-    const { error } = await supabase.from('deliveries').insert({
+    const { data, error } = await supabase.from('deliveries').insert({
       customer_id: d.customerId,
       customer_name: d.customerName,
       driver_id: d.driverId || null,
@@ -272,7 +273,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       item_weight: d.itemWeight,
       item_type: d.itemType,
       vehicle_type: d.vehicleType,
-    });
+    }).select('id').single();
 
     if (error) {
       console.error('Error adding delivery:', error.message);
@@ -280,6 +281,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     // Don't await this to avoid hanging the UI if fetch is slow
+    fetchDeliveries();
+    return data.id as string;
+  }, [fetchDeliveries]);
+
+  const updateDelivery = useCallback(async (deliveryId: string, updates: Partial<Delivery>) => {
+    // Convert camelCase keys back to snake_case for Supabase
+    const supabaseUpdates: any = {};
+    if (updates.status) supabaseUpdates.status = updates.status;
+    if (updates.paymentMethod) supabaseUpdates.payment_method = updates.paymentMethod;
+    // (add more fields if needed for future use)
+
+    const { error } = await supabase
+      .from('deliveries')
+      .update(supabaseUpdates)
+      .eq('id', deliveryId);
+
+    if (error) {
+      console.error('Error updating delivery:', error.message);
+      throw error;
+    }
+
     fetchDeliveries();
   }, [fetchDeliveries]);
 
@@ -322,6 +344,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         signOut,
         fetchDeliveries,
         addDelivery,
+        updateDelivery,
         updateDeliveryStatus,
         setBooking,
         resetBooking,

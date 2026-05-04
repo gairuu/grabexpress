@@ -11,7 +11,7 @@ import { PaymentMethod } from '@/lib/types';
 
 export default function PaymentByIdPage() {
   const router = useRouter();
-  const { booking, addDelivery, user, loading, resetBooking } = useApp();
+  const { booking, updateDelivery, user, loading, resetBooking } = useApp();
   const params = useParams<{ deliveryId: string }>();
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [isPaid, setIsPaid] = useState(false);
@@ -38,26 +38,8 @@ export default function PaymentByIdPage() {
     setError('');
 
     try {
-      await addDelivery({
-        customerId: user.id,
-        customerName: user.name,
-        driverId: booking.driver!.id,
-        driverName: booking.driver!.name,
-        pickup: booking.pickup,
-        dropoff: booking.dropoff,
-        status: 'delivered',
-        fee: booking.fee,
+      await updateDelivery(booking.id, {
         paymentMethod: method,
-        createdAt: new Date().toISOString(),
-        estimatedTime: '25 mins',
-        senderName: booking.senderName,
-        senderPhone: booking.senderPhone,
-        recipientName: booking.recipientName,
-        recipientPhone: booking.recipientPhone,
-        itemSize: booking.itemSize,
-        itemWeight: booking.itemWeight,
-        itemType: booking.itemType,
-        vehicleType: booking.vehicleType,
       });
 
       setIsPaid(true);
