@@ -9,10 +9,9 @@ import StatusTimeline from '@/components/StatusTimeline';
 import { DeliveryStatus } from '@/lib/types';
 
 export default function TrackingByIdPage() {
-  const { booking, setBooking, user, loading } = useApp();
+  const { booking, user, loading, deliveries, fetchDeliveries } = useApp();
   const params = useParams<{ deliveryId: string }>();
   const router = useRouter();
-  const [localStatus, setLocalStatus] = useState<DeliveryStatus>(booking.status || 'pending');
 
   useEffect(() => {
     if (loading) return;
@@ -21,21 +20,17 @@ export default function TrackingByIdPage() {
       return;
     }
 
-    const pendingToTransit = setTimeout(() => {
-      setLocalStatus('in_transit');
-      setBooking({ status: 'in_transit' });
-    }, 3000);
+    // Poll the database every 2 seconds to get real-time updates from the driver
+    const interval = setInterval(() => {
+      fetchDeliveries();
+    }, 2000);
 
-    const transitToDelivered = setTimeout(() => {
-      setLocalStatus('delivered');
-      setBooking({ status: 'delivered' });
-    }, 9000);
+    return () => clearInterval(interval);
+  }, [booking.driver, booking.id, params.deliveryId, router, loading, fetchDeliveries]);
 
-    return () => {
-      clearTimeout(pendingToTransit);
-      clearTimeout(transitToDelivered);
-    };
-  }, [booking.driver, booking.id, params.deliveryId, router, setBooking, loading]);
+  // Find the real status from the database, fallback to booking state
+  const currentDelivery = deliveries.find(d => d.id === params.deliveryId);
+  const realStatus = currentDelivery?.status || booking.status || 'pending';
 
   if (loading) {
     return <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center"><div className="text-[#6b7280]">Loading...</div></div>;
@@ -60,9 +55,9 @@ export default function TrackingByIdPage() {
           <div className="md:col-span-3">
             <div className="rounded-xl border border-[#e5e7eb] bg-white p-8 shadow-sm">
               <h3 className="text-lg font-bold text-[#111827] mb-8">Tracking Details</h3>
-              <StatusTimeline currentStatus={localStatus} />
+              <StatusTimeline currentStatus={realStatus} />
 
-              {localStatus === 'delivered' && (
+              {realStatus === 'delivered' && (
                 <div className="mt-10 p-6 bg-[var(--grab-green)]/10 border border-[var(--grab-green)]/30 rounded-2xl fade-in">
                   <div className="flex items-center gap-4">
                     <div className="text-[#00B14F]">
@@ -105,7 +100,7 @@ export default function TrackingByIdPage() {
               </div>
             </div>
 
-            {localStatus === 'delivered' && (
+            {realStatus === 'delivered' && (
               <button
                 onClick={() => router.push(`/payment/${booking.id}`)}
                 className="btn-primary py-4 text-lg font-bold grab-glow w-full fade-in"
