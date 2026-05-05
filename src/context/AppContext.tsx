@@ -151,7 +151,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (error) return { error: error.message };
     if (!data.user) return { error: 'Signup failed. Please try again.' };
 
-    // Let the Supabase trigger handle profile creation! We just need to handle driver-specific records.
+    // Force update the profile to ensure the trigger didn't default it to customer
+    const { error: profileUpdateError } = await supabase
+      .from('profiles')
+      .update({ role, name })
+      .eq('id', data.user.id);
+      
+    if (profileUpdateError) {
+      console.error("Failed to force update profile role:", profileUpdateError);
+    }
 
     // If driver, create drivers row
     if (role === 'driver') {
@@ -162,6 +170,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         rating: 5.0,
         is_available: true,
       });
+      
+      if (driverError) {
+        console.error("Failed to create driver record:", driverError);
+      }
     }
 
     // Set user immediately so we don't need to wait for onAuthStateChange
