@@ -37,11 +37,15 @@ export default function AuthPage() {
       if (isLogin) {
         console.log('Attempting login...');
         const result = await signIn(email, password);
+        console.log('Login result:', result);
         if (result.error) {
           setError(result.error);
           setIsSubmitting(false);
           return;
         }
+        // Successful login will be handled by the useEffect redirect
+        console.log('Login successful, waiting for redirect...');
+        return;
       } else {
         console.log('Attempting signup with role:', role);
         const result = await signUp(email, password, name, role);

@@ -178,8 +178,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    console.log('Starting signIn process for:', email);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
+    if (error) {
+      console.error('SignIn error:', error.message);
+      return { error: error.message };
+    }
+    console.log('SignIn successful');
     return { error: null };
   }, []);
 
