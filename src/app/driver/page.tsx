@@ -9,7 +9,7 @@ import { Clock, Truck, CheckCircle2 } from 'lucide-react';
 import StatsCard from '@/components/StatsCard';
 
 export default function DriverDashboardPage() {
-  const { user, loading, deliveries, updateDeliveryStatus } = useApp();
+  const { user, loading, deliveries, updateDeliveryStatus, fetchDeliveries } = useApp();
   const router = useRouter();
 
   useEffect(() => {
