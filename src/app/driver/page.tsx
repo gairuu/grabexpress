@@ -19,7 +19,14 @@ export default function DriverDashboardPage() {
     } else if (user.role !== 'driver') {
       router.push('/dashboard');
     }
-  }, [user, router, loading]);
+
+    // Refresh deliveries every 3 seconds to catch new jobs
+    const interval = setInterval(() => {
+      fetchDeliveries();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [user, router, loading, fetchDeliveries]);
 
   if (loading) {
     return <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center"><div className="text-[#6b7280]">Loading...</div></div>;
