@@ -32,6 +32,23 @@ export default function TrackingByIdPage() {
   const currentDelivery = deliveries.find(d => d.id === params.deliveryId);
   const realStatus = currentDelivery?.status || booking.status || 'pending';
 
+  // ── Mock Location Simulation ──
+  const [progress, setProgress] = useState(0);
+  
+  useEffect(() => {
+    if (realStatus === 'in_transit') {
+      const interval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 100) return 100;
+          return prev + 1; // 1% every 200ms = 20 seconds total
+        });
+      }, 200);
+      return () => clearInterval(interval);
+    } else if (realStatus === 'delivered') {
+      setProgress(100);
+    }
+  }, [realStatus]);
+
   if (loading) {
     return <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center"><div className="text-[#6b7280]">Loading...</div></div>;
   }
@@ -56,6 +73,27 @@ export default function TrackingByIdPage() {
             <div className="rounded-xl border border-[#e5e7eb] bg-white p-8 shadow-sm">
               <h3 className="text-lg font-bold text-[#111827] mb-8">Tracking Details</h3>
               <StatusTimeline currentStatus={realStatus} />
+              
+              {/* Mock Location Progress Bar */}
+              {(realStatus === 'in_transit' || realStatus === 'delivered') && (
+                <div className="mt-10 pt-10 border-t border-[#f3f4f6]">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-sm font-bold text-[#111827]">Current Location (Simulated)</span>
+                    <span className="text-sm font-medium text-[#00b14f]">{progress}% to destination</span>
+                  </div>
+                  <div className="h-3 w-full bg-[#f3f4f6] rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#00b14f] transition-all duration-300 ease-linear rounded-full"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <p className="mt-4 text-sm text-[#6b7280]">
+                    {realStatus === 'delivered' 
+                      ? 'Package has arrived!' 
+                      : `Driver is currently ${progress < 50 ? 'near the pickup point' : 'en route to the drop-off'}.`}
+                  </p>
+                </div>
+              )}
 
               {realStatus === 'delivered' && (
                 <div className="mt-10 p-6 bg-[var(--grab-green)]/10 border border-[var(--grab-green)]/30 rounded-2xl fade-in">

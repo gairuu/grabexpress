@@ -275,7 +275,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       throw error;
     }
 
-    // Don't await this to avoid hanging the UI if fetch is slow
+    // Mark driver as unavailable immediately (Business Rule: one active delivery)
+    if (d.driverId) {
+      await supabase.from('drivers').update({ is_available: false }).eq('id', d.driverId);
+    }
+
     fetchDeliveries();
     return data.id as string;
   }, [fetchDeliveries]);
@@ -301,6 +305,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchDeliveries]);
 
   const updateDeliveryStatus = useCallback(async (deliveryId: string, status: DeliveryStatus) => {
+    const { data: currentDel } = await supabase.from('deliveries').select('*').eq('id', deliveryId).single();
+    
     const { error } = await supabase
       .from('deliveries')
       .update({ status })
@@ -311,11 +317,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       throw error;
     }
 
-    // Optimistic update
-    setDeliveries((prev) =>
-      prev.map((del) => (del.id === deliveryId ? { ...del, status } : del))
-    );
-  }, []);
+    // Handle completed delivery (Business Rules)
+    if (status === 'delivered' && currentDel) {
+      // 1. Mark driver as available again
+      if (currentDel.driver_id) {
+        await supabase.from('drivers').update({ is_available: true }).eq('id', currentDel.driver_id);
+      }
+      // 2. Record formal payment
+      await supabase.from('payments').insert({
+        delivery_id: deliveryId,
+        amount: currentDel.fee,
+        payment_method: currentDel.payment_method,
+        payment_status: 'completed'
+      });
+    }
+
+    fetchDeliveries();
+  }, [fetchDeliveries]);
 
   const findAvailableDriver = useCallback(async () => {
     // Fetch a real driver from Supabase who is available

@@ -32,10 +32,10 @@ export default function Navbar() {
 
           {user && (
             <div className="hidden items-center gap-8 text-sm font-semibold text-white/70 md:flex">
-              <Link href={user.role === 'driver' ? '/driver' : '/dashboard'} className="transition hover:text-white">
+              <Link href={user.role === 'driver' ? '/driver' : user.role === 'admin' ? '/admin' : '/dashboard'} className="transition hover:text-white">
                 Home
               </Link>
-              {user.role !== 'driver' && (
+              {user.role === 'customer' && (
                 <Link href="/book" className="transition hover:text-white">
                   Book
                 </Link>
@@ -47,7 +47,7 @@ export default function Navbar() {
               )}
               {user.role === 'admin' && (
                 <Link href="/admin" className="transition hover:text-white">
-                  Admin
+                  Admin Panel
                 </Link>
               )}
             </div>
