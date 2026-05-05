@@ -11,6 +11,8 @@ export default function MatchingPage() {
   const { booking, setBooking, user, loading, addDelivery, findAvailableDriver } = useApp();
   const router = useRouter();
 
+  const [errorMsg, setErrorMsg] = useState('');
+
   useEffect(() => {
     if (loading) return;
     if (!booking.pickup) {
@@ -19,14 +21,20 @@ export default function MatchingPage() {
     }
 
     const matchDriver = async () => {
-      const driver = await findAvailableDriver();
-      if (driver) {
-        setBooking({ driver });
-        setIsMatching(false);
-      } else {
-        // Handle case where no drivers are available
-        alert("No available drivers right now! Please try again later.");
-        router.push('/book');
+      try {
+        const driver = await findAvailableDriver();
+        if (driver) {
+          setBooking({ driver });
+          setIsMatching(false);
+        } else {
+          // Handle case where no drivers are available
+          setErrorMsg("No available drivers right now! Please try again later.");
+          setTimeout(() => router.push('/book'), 3000);
+        }
+      } catch (err) {
+        console.error("Error matching driver:", err);
+        setErrorMsg("Error finding a driver. Please try again.");
+        setTimeout(() => router.push('/book'), 3000);
       }
     };
 
@@ -35,7 +43,7 @@ export default function MatchingPage() {
     }, 3500);
 
     return () => clearTimeout(timer);
-  }, [booking.pickup, router, setBooking, loading]);
+  }, [booking.pickup, router, setBooking, loading, findAvailableDriver]);
 
   const handleStart = async () => {
     try {
@@ -83,21 +91,27 @@ export default function MatchingPage() {
       <Navbar />
       
       <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-        {isMatching ? (
+        {isMatching || errorMsg ? (
           <div className="space-y-12">
             <div className="relative">
-              <div className="w-32 h-32 rounded-full mx-auto flex items-center justify-center z-10 relative bg-[#00B14F] text-white">
+              <div className={`w-32 h-32 rounded-full mx-auto flex items-center justify-center z-10 relative text-white ${errorMsg ? 'bg-red-500' : 'bg-[#00B14F]'}`}>
                 <Search size={48} strokeWidth={3} />
               </div>
-              <div className="absolute inset-0 ripple rounded-full"></div>
-              <div className="absolute inset-0 ripple-delay-1 rounded-full"></div>
-              <div className="absolute inset-0 ripple-delay-2 rounded-full"></div>
+              {!errorMsg && (
+                <>
+                  <div className="absolute inset-0 ripple rounded-full"></div>
+                  <div className="absolute inset-0 ripple-delay-1 rounded-full"></div>
+                  <div className="absolute inset-0 ripple-delay-2 rounded-full"></div>
+                </>
+              )}
             </div>
 
             <div className="space-y-4">
-              <h1 className="text-3xl font-extrabold text-[#111827]">Finding your driver...</h1>
+              <h1 className={`text-3xl font-extrabold ${errorMsg ? 'text-red-500' : 'text-[#111827]'}`}>
+                {errorMsg ? "Matching Failed" : "Finding your driver..."}
+              </h1>
               <p className="max-w-sm mx-auto text-[#6b7280]">
-                We&apos;re matching you with the nearest available GrabExpress driver in your area.
+                {errorMsg ? errorMsg : "We're matching you with the nearest available GrabExpress driver in your area."}
               </p>
             </div>
 
