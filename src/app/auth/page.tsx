@@ -35,6 +35,7 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
+        console.log('Attempting login...');
         const result = await signIn(email, password);
         if (result.error) {
           setError(result.error);
@@ -42,7 +43,9 @@ export default function AuthPage() {
           return;
         }
       } else {
+        console.log('Attempting signup with role:', role);
         const result = await signUp(email, password, name, role);
+        console.log('Signup result:', result);
         if (result.error) {
           setError(result.error);
           setIsSubmitting(false);
@@ -51,10 +54,12 @@ export default function AuthPage() {
         // If sign up success and email verification is on, show message
         setVerificationSent(true);
         setIsSubmitting(false);
+        console.log('Signup successful, verification state set');
         return;
       }
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err: any) {
+      console.error('Frontend Auth Error:', err);
+      setError('Something went wrong. Please check the console.');
       setIsSubmitting(false);
     }
   };

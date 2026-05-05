@@ -58,33 +58,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (error || !data) {
       console.log('Profile missing or error fetching:', error?.message);
-      // If profile is missing, try to create it from session data (important for OAuth)
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const name = session.user.user_metadata.full_name || session.user.user_metadata.name || 'User';
-        const email = session.user.email || '';
-        
-        console.log('Attempting to create profile for:', email);
-        const { data: newProfile, error: insertError } = await supabase
-          .from('profiles')
-          .insert({ id: userId, name, email, role: 'customer' })
-          .select()
-          .single();
-        
-        if (insertError) {
-          console.error('Auto-profile creation failed:', insertError.message);
-          return null;
-        }
-        
-        console.log('Profile created successfully!');
-        return {
-          id: newProfile.id,
-          name: newProfile.name,
-          email: newProfile.email,
-          avatar: newProfile.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
-          role: newProfile.role,
-        };
-      }
       return null;
     }
 
@@ -140,53 +113,68 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Auth functions ──
   const signUp = useCallback(async (email: string, password: string, name: string, role: AppUser['role']) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { name, role },
-      },
-    });
-
-    if (error) return { error: error.message };
-    if (!data.user) return { error: 'Signup failed. Please try again.' };
-
-    // Force update the profile to ensure the trigger didn't default it to customer
-    const { error: profileUpdateError } = await supabase
-      .from('profiles')
-      .update({ role, name })
-      .eq('id', data.user.id);
-      
-    if (profileUpdateError) {
-      console.error("Failed to force update profile role:", profileUpdateError);
-    }
-
-    // If driver, create drivers row
-    if (role === 'driver') {
-      const { error: driverError } = await supabase.from('drivers').insert({
-        id: data.user.id,
-        vehicle_type: 'Motorcycle',
-        plate_number: 'TBD',
-        rating: 5.0,
-        is_available: true,
+    try {
+      console.log('Starting signUp process for:', email, role);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name, role },
+        },
       });
-      
-      if (driverError) {
-        console.error("Failed to create driver record:", driverError);
+
+      console.log('Supabase signUp response:', { user: data.user?.id, error });
+
+      if (error) return { error: error.message };
+      if (!data.user) return { error: 'Signup failed. Please try again.' };
+
+      console.log('Forcing profile update...');
+      // Force update the profile to ensure the trigger didn't default it to customer
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({ role, name })
+        .eq('id', data.user.id);
+        
+      if (profileUpdateError) {
+        console.error("Failed to force update profile role:", profileUpdateError);
+      } else {
+        console.log('Profile update successful');
       }
+
+      // If driver, create drivers row
+      if (role === 'driver') {
+        console.log('Creating driver record...');
+        const { error: driverError } = await supabase.from('drivers').insert({
+          id: data.user.id,
+          vehicle_type: 'Motorcycle',
+          plate_number: 'TBD',
+          rating: 5.0,
+          is_available: true,
+        });
+        
+        if (driverError) {
+          console.error("Failed to create driver record:", driverError);
+        } else {
+          console.log('Driver record created successfully');
+        }
+      }
+
+      console.log('Setting user state and finishing...');
+      // Set user immediately so we don't need to wait for onAuthStateChange
+      setUser({
+        id: data.user.id,
+        name,
+        email,
+        avatar: name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
+        role,
+        ...(role === 'driver' ? { linkedDriverId: data.user.id } : {}),
+      });
+
+      return { error: null };
+    } catch (err: any) {
+      console.error('Unexpected signUp error:', err);
+      return { error: err.message || 'An unexpected error occurred' };
     }
-
-    // Set user immediately so we don't need to wait for onAuthStateChange
-    setUser({
-      id: data.user.id,
-      name,
-      email,
-      avatar: name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
-      role,
-      ...(role === 'driver' ? { linkedDriverId: data.user.id } : {}),
-    });
-
-    return { error: null };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {

@@ -9,9 +9,14 @@ export default function Navbar() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await signOut();
-    // Use hard redirect to ensure session is completely cleared
-    window.location.href = '/';
+    try {
+      await signOut();
+    } catch (e) {
+      console.error("Logout error:", e);
+    } finally {
+      // Use hard redirect to ensure session is completely cleared
+      window.location.href = '/';
+    }
   };
 
   return (
