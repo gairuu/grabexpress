@@ -3,13 +3,12 @@ import { Search, Package, CheckCircle2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { getBestDriver } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import DriverCard from '@/components/DriverCard';
 
 export default function MatchingPage() {
   const [isMatching, setIsMatching] = useState(true);
-  const { booking, setBooking, user, loading, addDelivery } = useApp();
+  const { booking, setBooking, user, loading, addDelivery, findAvailableDriver } = useApp();
   const router = useRouter();
 
   useEffect(() => {
@@ -19,10 +18,20 @@ export default function MatchingPage() {
       return;
     }
 
+    const matchDriver = async () => {
+      const driver = await findAvailableDriver();
+      if (driver) {
+        setBooking({ driver });
+        setIsMatching(false);
+      } else {
+        // Handle case where no drivers are available
+        alert("No available drivers right now! Please try again later.");
+        router.push('/book');
+      }
+    };
+
     const timer = setTimeout(() => {
-      const driver = getBestDriver();
-      setBooking({ driver });
-      setIsMatching(false);
+      matchDriver();
     }, 3500);
 
     return () => clearTimeout(timer);

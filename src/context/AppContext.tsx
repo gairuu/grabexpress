@@ -17,6 +17,7 @@ interface AppContextType {
   addDelivery: (d: Omit<Delivery, 'id'>) => Promise<string>;
   updateDelivery: (deliveryId: string, updates: Partial<Delivery>) => Promise<void>;
   updateDeliveryStatus: (deliveryId: string, status: DeliveryStatus) => Promise<void>;
+  findAvailableDriver: () => Promise<any>;
   setBooking: (b: Partial<BookingState>) => void;
   resetBooking: () => void;
 }
@@ -150,22 +151,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (error) return { error: error.message };
     if (!data.user) return { error: 'Signup failed. Please try again.' };
 
-    // Manually create the profile row (no trigger dependency)
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user.id,
-      name,
-      email,
-      role,
-    });
+    // Let the Supabase trigger handle profile creation! We just need to handle driver-specific records.
 
-    if (profileError) {
-      console.error('Profile creation error:', profileError);
-      return { error: 'Account created but profile setup failed. Try logging in.' };
-    }
-
-    // If driver, also create drivers row
+    // If driver, create drivers row
     if (role === 'driver') {
-      await supabase.from('drivers').insert({
+      const { error: driverError } = await supabase.from('drivers').insert({
         id: data.user.id,
         vehicle_type: 'Motorcycle',
         plate_number: 'TBD',
@@ -322,6 +312,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const findAvailableDriver = useCallback(async () => {
+    // Fetch a real driver from Supabase who is available
+    const { data, error } = await supabase
+      .from('drivers')
+      .select('*, profiles(name, avatar_url, phone)')
+      .eq('is_available', true)
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    const profiles = data.profiles as any;
+
+    return {
+      id: data.id,
+      name: profiles?.name || 'Driver',
+      avatar: profiles?.name ? profiles.name.slice(0, 2).toUpperCase() : 'DR',
+      vehicle: data.vehicle_type,
+      plateNumber: data.plate_number,
+      rating: data.rating,
+      totalDeliveries: 0,
+      isAvailable: data.is_available,
+      phone: profiles?.phone || '',
+    };
+  }, []);
+
   // ── Booking (local state, same as before) ──
   const setBooking = useCallback((partial: Partial<BookingState>) => {
     setBookingState((prev) => ({ ...prev, ...partial }));
@@ -346,6 +364,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addDelivery,
         updateDelivery,
         updateDeliveryStatus,
+        findAvailableDriver,
         setBooking,
         resetBooking,
       }}
