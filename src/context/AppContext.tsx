@@ -385,8 +385,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // 3. Handle business rules (driver availability, payments)
     if ((status === 'delivered' || status === 'cancelled') && currentDel) {
-      if (currentDel.driver_id) {
-        await supabase.from('drivers').update({ is_available: true }).eq('id', currentDel.driver_id);
+      // Free up the driver
+      const drId = currentDel.driver_id;
+      if (drId) {
+        console.log('Freeing up driver:', drId);
+        await supabase.from('drivers').update({ is_available: true }).eq('id', drId);
       }
       
       if (status === 'delivered') {
@@ -407,7 +410,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchDeliveries]);
 
   const findAvailableDriver = useCallback(async () => {
-    // Use maybeSingle() so it returns null (not an error) when no rows found
     // Safety timeout for the search
     const fetchPromise = supabase
       .from('drivers')
@@ -417,11 +419,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Driver search timed out')), 8000)
+      setTimeout(() => reject(new Error('Driver search timed out')), 10000)
     );
 
     try {
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      const data = result.data;
+      const error = result.error;
 
       if (error) {
         console.error('findAvailableDriver DB error:', error.message, error.code);
