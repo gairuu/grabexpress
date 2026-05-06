@@ -28,11 +28,11 @@ export default function StatusTimeline({ currentStatus }: Props) {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 40, flexShrink: 0 }}>
               <div style={{
                 width: 40, height: 40, borderRadius: '50%',
-                background: isDone ? 'var(--grab-green)' : isActive ? 'rgba(0,177,79,0.15)' : '#f3f4f6',
-                border: isActive ? '2px solid var(--grab-green)' : isDone ? 'none' : '2px solid #d1d5db',
+                background: isDone ? 'var(--grab-green)' : isActive ? 'rgba(0,177,79,0.25)' : '#f3f4f6',
+                border: isActive ? '3px solid var(--grab-green)' : isDone ? 'none' : '2px solid #d1d5db',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 18, transition: 'all 0.4s ease',
-                boxShadow: isActive ? '0 0 16px rgba(0,177,79,0.4)' : 'none',
+                boxShadow: isActive ? '0 0 20px rgba(0,177,79,0.5)' : 'none',
               }}>
                 <meta.icon size={20} className={isDone ? 'text-white' : isActive ? 'text-[var(--grab-green)]' : 'text-[#9ca3af]'} />
               </div>
