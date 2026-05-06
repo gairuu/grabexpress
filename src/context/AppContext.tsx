@@ -210,11 +210,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     let query = supabase.from('deliveries').select('*').order('created_at', { ascending: false });
 
-    // Admin sees all, customer sees their own, driver sees assigned
+    // Admin sees all, customer sees their own, driver sees assigned + unassigned pending
     if (user.role === 'customer') {
       query = query.eq('customer_id', user.id);
     } else if (user.role === 'driver') {
-      query = query.eq('driver_id', user.id);
+      // Fetch all: assigned to me OR unassigned pending. Filter in UI.
+      query = supabase
+        .from('deliveries')
+        .select('*')
+        .or(`driver_id.eq.${user.id},driver_id.is.null`)
+        .order('created_at', { ascending: false });
     }
     // admin: no filter (RLS handles it)
 
