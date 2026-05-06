@@ -94,6 +94,7 @@ export default function DriverDashboardPage() {
 
       <main className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
         <header className="mb-6 flex flex-col justify-between gap-3 md:flex-row md:items-center">
+          <div>
             <h1 className="text-2xl font-bold text-[#111827]">Driver Dashboard</h1>
             <div className="flex items-center gap-2 mt-1">
               <span className={`h-2 w-2 rounded-full ${driverStatus?.is_available ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
