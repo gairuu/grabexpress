@@ -332,12 +332,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       throw new Error(`DB Error: ${error.message}`);
     }
 
-    // If a driver is already assigned (old flow), mark them unavailable
-    if (d.driverId) {
+    // If a driver is already assigned (old flow), mark them busy
+    if (d.driver_id) {
       try {
-        await supabase.from('drivers').update({ is_available: false }).eq('id', d.driverId);
+        await supabase.from('drivers').update({ status: 'busy' }).eq('id', d.driver_id);
       } catch (e) {
-        console.warn('Driver availability update failed:', e);
+        console.warn('Driver status update failed:', e);
       }
     }
 
@@ -347,16 +347,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateDelivery = useCallback(async (deliveryId: string, updates: Partial<Delivery>) => {
     const supabaseUpdates: any = {};
-    if (updates.status) supabaseUpdates.status = updates.status;
-    if (updates.paymentMethod) supabaseUpdates.payment_method = updates.paymentMethod;
-    if (updates.senderName) supabaseUpdates.sender_name = updates.senderName;
-    if (updates.senderPhone) supabaseUpdates.sender_phone = updates.senderPhone;
-    if (updates.recipientName) supabaseUpdates.recipient_name = updates.recipientName;
-    if (updates.recipientPhone) supabaseUpdates.recipient_phone = updates.recipientPhone;
-    if (updates.itemSize) supabaseUpdates.item_size = updates.itemSize;
-    if (updates.itemWeight) supabaseUpdates.item_weight = updates.itemWeight;
-    if (updates.itemType) supabaseUpdates.item_type = updates.itemType;
-    if (updates.vehicleType) supabaseUpdates.vehicle_type = updates.vehicleType;
+    if (updates.delivery_status) supabaseUpdates.delivery_status = updates.delivery_status;
+    if (updates.payment_method) supabaseUpdates.payment_method = updates.payment_method;
+    if (updates.sender_name) supabaseUpdates.sender_name = updates.sender_name;
+    if (updates.sender_phone) supabaseUpdates.sender_phone = updates.sender_phone;
+    if (updates.recipient_name) supabaseUpdates.recipient_name = updates.recipient_name;
+    if (updates.recipient_phone) supabaseUpdates.recipient_phone = updates.recipient_phone;
+    if (updates.item_size) supabaseUpdates.item_size = updates.item_size;
+    if (updates.item_weight) supabaseUpdates.item_weight = updates.item_weight;
+    if (updates.item_type) supabaseUpdates.item_type = updates.item_type;
+    if (updates.vehicle_type) supabaseUpdates.vehicle_type = updates.vehicle_type;
 
     const { error } = await supabase
       .from('deliveries')

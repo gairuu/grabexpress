@@ -75,7 +75,7 @@ export default function TrackingByIdPage() {
   }, [params.deliveryId, loading]);
 
   // Use state delivery or fallback to context booking
-  const realStatus = delivery?.delivery_status || booking.status || 'pending';
+  const realStatus = delivery?.delivery_status || booking.delivery_status || 'pending';
   const displayDriver = delivery?.driver_id ? {
     id: delivery.driver_id,
     name: delivery.driver_name,
@@ -181,14 +181,14 @@ export default function TrackingByIdPage() {
                   <div className="w-2 h-2 rounded-full bg-[#00B14F] mt-1.5 flex-shrink-0"></div>
                   <div>
                     <div className="text-[10px] text-[#9ca3af] uppercase font-bold">Pickup</div>
-                    <div className="text-sm text-[#111827] font-medium">{delivery?.pickup_location || booking.pickup}</div>
+                    <div className="text-sm text-[#111827] font-medium">{delivery?.pickup_location || booking.pickup_location}</div>
                   </div>
                 </div>
                 <div className="flex gap-4">
                   <div className="w-2 h-2 rounded bg-red-400 mt-1.5 flex-shrink-0"></div>
                   <div>
                     <div className="text-[10px] text-[#9ca3af] uppercase font-bold">Drop-off</div>
-                    <div className="text-sm text-[#111827] font-medium">{delivery?.dropoff_location || booking.dropoff}</div>
+                    <div className="text-sm text-[#111827] font-medium">{delivery?.dropoff_location || booking.dropoff_location}</div>
                   </div>
                 </div>
               </div>

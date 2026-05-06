@@ -79,6 +79,7 @@ export interface AppUser {
   id: string;
   name: string;
   email: string;
+  contact_number?: string;
   avatar: string;
   role: 'customer' | 'driver' | 'admin';
   linkedDriverId?: string;
