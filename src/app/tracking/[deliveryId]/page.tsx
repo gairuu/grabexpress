@@ -133,7 +133,7 @@ export default function TrackingByIdPage() {
           <div className="md:col-span-2 space-y-6">
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-[#9ca3af] uppercase tracking-widest px-1">Your Driver</h3>
-              <DriverCard driver={booking.driver} compact />
+              {booking.driver && <DriverCard driver={booking.driver} compact />}
             </div>
 
             <div className="rounded-xl border border-[#e5e7eb] bg-white p-6 shadow-sm space-y-6">
