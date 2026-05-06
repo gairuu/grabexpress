@@ -8,134 +8,76 @@ import DriverCard from '@/components/DriverCard';
 
 export default function MatchingPage() {
   const [isMatching, setIsMatching] = useState(true);
-  const { booking, setBooking, user, loading, addDelivery, findAvailableDriver } = useApp();
+  const { booking, setBooking, user, loading, deliveries, addDelivery, findAvailableDriver } = useApp();
   const router = useRouter();
 
   const [errorMsg, setErrorMsg] = useState('');
   const [showRetry, setShowRetry] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [createdDeliveryId, setCreatedDeliveryId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (loading) return;
-    if (!booking.pickup) {
-      router.push('/book');
-      return;
-    }
+    if (loading || !user || !booking.pickup || createdDeliveryId) return;
 
-    const matchDriver = async () => {
+    const createInitialDelivery = async () => {
       try {
-        const driver = await findAvailableDriver();
-        if (driver) {
-          setBooking({ driver });
-          setIsMatching(false);
-        } else {
-          // Handle case where no drivers are available
-          setErrorMsg("No available drivers right now! Please ensure you have run the mock-drivers script in Supabase.");
-          setShowRetry(true);
-        }
+        const id = await addDelivery({
+          customerId: user.id,
+          customerName: user.name || 'Customer',
+          driverId: '', // Unassigned
+          driverName: 'Searching...',
+          pickup: booking.pickup,
+          dropoff: booking.dropoff,
+          status: 'pending',
+          fee: booking.fee,
+          paymentMethod: booking.paymentMethod,
+          estimatedTime: '25-35 mins',
+          createdAt: new Date().toISOString(),
+          senderName: booking.senderName,
+          senderPhone: booking.senderPhone,
+          recipientName: booking.recipientName,
+          recipientPhone: booking.recipientPhone,
+          itemSize: booking.itemSize,
+          itemWeight: booking.itemWeight,
+          itemType: booking.itemType,
+          vehicleType: booking.vehicleType,
+        });
+        setCreatedDeliveryId(id);
       } catch (err) {
-        console.error("Error matching driver:", err);
-        setErrorMsg("Error finding a driver. Please check your connection.");
-        setShowRetry(true);
+        console.error("Error creating initial delivery:", err);
+        setErrorMsg("Failed to start search. Please try again.");
       }
     };
 
-    const forceMatch = async () => {
-      setIsMatching(true);
-      setErrorMsg('');
-      setShowRetry(false);
-      try {
-        // Fetch ANY driver, even if they are 'offline' for the demo
-        const { data, error } = await supabase
-          .from('drivers')
-          .select('*, profiles(name, avatar_url, phone)')
-          .limit(1)
-          .maybeSingle();
+    createInitialDelivery();
+  }, [user, booking, loading, addDelivery, createdDeliveryId]);
 
-        if (data) {
-          const profiles = data.profiles as any;
-          setBooking({ 
-            driver: {
-              id: data.id,
-              name: profiles?.name || 'Demo Driver',
-              avatar: profiles?.name ? profiles.name.slice(0, 2).toUpperCase() : 'DR',
-              vehicle: data.vehicle_type,
-              plateNumber: data.plate_number,
-              rating: data.rating,
-              totalDeliveries: 0,
-              isAvailable: true,
-              phone: profiles?.phone || '',
-            } 
-          });
-          setIsMatching(false);
-        } else {
-          setErrorMsg("Could not find any drivers in the database at all. Please run the mock-drivers script.");
-          setShowRetry(true);
+  // Listen for driver assignment
+  useEffect(() => {
+    if (!createdDeliveryId) return;
+
+    const assignedDelivery = (deliveries as any[]).find(d => d.id === createdDeliveryId && d.driverId);
+    if (assignedDelivery) {
+      setBooking({ 
+        id: createdDeliveryId,
+        driver: {
+          id: assignedDelivery.driverId,
+          name: assignedDelivery.driverName,
+          avatar: assignedDelivery.driverName.slice(0, 2).toUpperCase(),
+          vehicle: assignedDelivery.vehicleType || 'Motorcycle',
+          rating: 5.0,
+          totalDeliveries: 0,
+          isAvailable: false,
+          phone: '',
         }
-      } catch (err) {
-        setErrorMsg("Demo Match failed. Please check your connection.");
-        setShowRetry(true);
-      }
-    };
-
-    const timer = setTimeout(() => {
-      matchDriver();
-    }, 3500);
-
-    // Show retry button if it takes too long
-    const retryTimer = setTimeout(() => {
-      if (isMatching) setShowRetry(true);
-    }, 12000);
-
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(retryTimer);
-    };
-  }, [booking.pickup, router, setBooking, loading, findAvailableDriver, isMatching]);
-
-  const handleStart = async () => {
-    if (isStarting || !booking.driver) return;
-    
-    setIsStarting(true);
-    setErrorMsg('');
-
-    // Safety timeout: reset button if it takes more than 10 seconds
-    const safetyTimeout = setTimeout(() => {
-      setIsStarting(false);
-      setErrorMsg("Starting the delivery is taking longer than expected. Please check your connection.");
-    }, 12000);
-
-    try {
-      const deliveryId = await addDelivery({
-        customerId: user?.id || '',
-        customerName: user?.name || 'Customer',
-        driverId: booking.driver.id,
-        driverName: booking.driver.name,
-        pickup: booking.pickup,
-        dropoff: booking.dropoff,
-        status: 'pending',
-        fee: booking.fee,
-        paymentMethod: booking.paymentMethod,
-        estimatedTime: '25-35 mins',
-        createdAt: new Date().toISOString(),
-        senderName: booking.senderName,
-        senderPhone: booking.senderPhone,
-        recipientName: booking.recipientName,
-        recipientPhone: booking.recipientPhone,
-        itemSize: booking.itemSize,
-        itemWeight: booking.itemWeight,
-        itemType: booking.itemType,
-        vehicleType: booking.vehicleType,
       });
-
-      clearTimeout(safetyTimeout);
-      router.push(`/tracking/${deliveryId}`);
-    } catch (err: any) {
-      clearTimeout(safetyTimeout);
-      console.error('Start delivery error:', err);
-      setIsStarting(false);
-      setErrorMsg(err.message || 'Failed to start delivery. Please try again.');
+      setIsMatching(false);
     }
+  }, [deliveries, createdDeliveryId, setBooking]);
+
+  const handleStart = () => {
+    if (!createdDeliveryId) return;
+    router.push(`/tracking/${createdDeliveryId}`);
   };
 
   if (loading) {

@@ -5,12 +5,12 @@ import Navbar from '@/components/Navbar';
 import StatusBadge from '@/components/StatusBadge';
 import { useApp } from '@/context/AppContext';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Clock, Truck, CheckCircle2 } from 'lucide-react';
+import { Clock, Truck, CheckCircle2, Package } from 'lucide-react';
 import StatsCard from '@/components/StatsCard';
 import { supabase } from '@/lib/supabase';
 
 export default function DriverDashboardPage() {
-  const { user, loading, deliveries, updateDeliveryStatus, fetchDeliveries } = useApp();
+  const { user, loading, deliveries, updateDeliveryStatus, fetchDeliveries, acceptDelivery } = useApp();
   const router = useRouter();
   const [actionError, setActionError] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -86,8 +86,11 @@ export default function DriverDashboardPage() {
     completed: deliveries.filter((job) => job.status === 'delivered').length,
   };
 
-  // Only show active jobs in the main list
-  const myJobs = deliveries.filter(job => job.status === 'pending' || job.status === 'in_transit');
+  // Available jobs are those with no driver assigned
+  const availableJobs = deliveries.filter(job => !job.driverId && job.status === 'pending');
+  
+  // My jobs are those assigned to me and active
+  const myJobs = deliveries.filter(job => job.driverId === user?.id && (job.status === 'pending' || job.status === 'in_transit'));
 
   return (
     <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937]">
@@ -135,6 +138,41 @@ export default function DriverDashboardPage() {
           <StatsCard icon={Clock} label="Pending Pickups" value={stats.pending} />
           <StatsCard icon={Truck} label="In Transit" value={stats.active} color="#3B82F6" />
           <StatsCard icon={CheckCircle2} label="Completed" value={stats.completed} color="#00B14F" />
+        </section>
+
+        <section className="mb-8 rounded-xl border border-blue-200 bg-blue-50 shadow-sm overflow-hidden">
+          <div className="border-b border-blue-200 bg-blue-100/50 px-5 py-4">
+            <h2 className="text-base font-bold text-blue-800 flex items-center gap-2">
+              <Package size={18} />
+              Available Jobs (Manual Acceptance)
+            </h2>
+          </div>
+          <div className="divide-y divide-blue-100">
+            {availableJobs.length === 0 ? (
+              <div className="px-5 py-8 text-center text-sm text-blue-600/70">
+                No new jobs available right now. Tell a customer to book a delivery!
+              </div>
+            ) : (
+              availableJobs.map((job) => (
+                <div key={job.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between hover:bg-blue-100/30 transition-colors">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold text-blue-500 uppercase tracking-wider">#{job.id.slice(0, 8)}</span>
+                      <StatusBadge status={job.status} />
+                    </div>
+                    <p className="font-bold text-[#111827]">{job.pickup} → {job.dropoff}</p>
+                    <p className="text-sm text-[#6b7280]">Customer: {job.customerName} • ₱{job.fee.toFixed(2)}</p>
+                  </div>
+                  <button
+                    onClick={() => acceptDelivery(job.id, { id: user?.id || '', name: user?.name || 'Driver' })}
+                    className="rounded-lg bg-[#00B14F] px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-[#009940] transition-all"
+                  >
+                    Accept Job
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </section>
 
         <section className="rounded-xl border border-[#e5e7eb] bg-white shadow-sm">

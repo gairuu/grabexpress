@@ -312,13 +312,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       throw new Error(`DB Error: ${error.message}`);
     }
 
-    // Mark driver as unavailable immediately (Business Rule: one active delivery)
+    // If a driver is already assigned (old flow), mark them unavailable
     if (d.driverId) {
       try {
-        const { error: updateErr } = await supabase.from('drivers').update({ is_available: false }).eq('id', d.driverId);
-        if (updateErr) console.warn('Non-critical: Failed to update driver availability:', updateErr.message);
+        await supabase.from('drivers').update({ is_available: false }).eq('id', d.driverId);
       } catch (e) {
-        console.warn('Non-critical: Driver availability update exception:', e);
+        console.warn('Driver availability update failed:', e);
       }
     }
 
@@ -404,7 +403,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
           console.warn('Payment record insert failed:', paymentErr);
         }
       }
+    await fetchDeliveries();
+  }, [fetchDeliveries]);
+
+  const acceptDelivery = useCallback(async (deliveryId: string, driver: { id: string, name: string }) => {
+    const { error } = await supabase
+      .from('deliveries')
+      .update({ 
+        driver_id: driver.id,
+        driver_name: driver.name,
+        status: 'pending' 
+      })
+      .eq('id', deliveryId);
+
+    if (error) {
+      console.error('Error accepting delivery:', error.message);
+      throw new Error(`Failed to accept: ${error.message}`);
     }
+
+    // Mark driver as busy
+    await supabase.from('drivers').update({ is_available: false }).eq('id', driver.id);
 
     await fetchDeliveries();
   }, [fetchDeliveries]);
