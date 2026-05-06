@@ -28,10 +28,10 @@ export default function BookDeliveryPage() {
 
     setBooking({
       id: crypto.randomUUID(),
-      pickup,
-      dropoff,
-      fee,
-      status: 'pending'
+      pickup_location: pickup,
+      dropoff_location: dropoff,
+      delivery_fee: fee,
+      delivery_status: 'pending'
     });
     
     router.push('/book/details');

@@ -25,20 +25,20 @@ interface AppContextType {
 
 const defaultBooking: BookingState = {
   id: '',
-  pickup: '',
-  dropoff: '',
-  fee: 0,
+  pickup_location: '',
+  dropoff_location: '',
+  delivery_fee: 0,
   driver: null,
-  status: 'pending',
-  paymentMethod: 'cash',
-  senderName: '',
-  senderPhone: '',
-  recipientName: '',
-  recipientPhone: '',
-  itemSize: 'S',
-  itemWeight: 1,
-  itemType: 'Documents',
-  vehicleType: 'Motorcycle',
+  delivery_status: 'pending',
+  payment_method: 'cash',
+  sender_name: '',
+  sender_phone: '',
+  recipient_name: '',
+  recipient_phone: '',
+  item_size: 'S',
+  item_weight: 1,
+  item_type: 'Documents',
+  vehicle_type: 'Motorcycle',
 };
 
 const AppContext = createContext<AppContextType>({} as AppContextType);

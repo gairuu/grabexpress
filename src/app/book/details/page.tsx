@@ -31,7 +31,7 @@ export default function BookingDetailsPage() {
   const [guarantee, setGuarantee] = useState<'basic' | 'standard' | 'premium'>('basic');
 
   useEffect(() => {
-    if (!booking.pickup || !booking.dropoff) {
+    if (!booking.pickup_location || !booking.dropoff_location) {
       router.push('/book');
     }
   }, [booking, router]);
@@ -47,15 +47,15 @@ export default function BookingDetailsPage() {
 
   const handleBook = () => {
     setBooking({
-      senderName,
-      senderPhone,
-      recipientName,
-      recipientPhone,
-      itemSize: selectedSize,
-      itemWeight,
-      itemType,
-      vehicleType: selectedVehicle,
-      fee: totalPrice,
+      sender_name: senderName,
+      sender_phone: senderPhone,
+      recipient_name: recipientName,
+      recipient_phone: recipientPhone,
+      item_size: selectedSize,
+      item_weight: itemWeight,
+      item_type: itemType,
+      vehicle_type: selectedVehicle,
+      delivery_fee: totalPrice,
     });
     router.push('/matching');
   };
@@ -93,7 +93,7 @@ export default function BookingDetailsPage() {
                       <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-[#3B82F6] flex items-center justify-center text-white">
                         <div className="w-2 h-2 rounded-full bg-white" />
                       </div>
-                      <div className="font-bold text-[#111827] mb-3">{booking.pickup}</div>
+                      <div className="font-bold text-[#111827] mb-3">{booking.pickup_location}</div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input 
                           type="text" 
@@ -117,7 +117,7 @@ export default function BookingDetailsPage() {
                       <div className="absolute -left-8 top-1 w-6 h-6 rounded-full bg-[#EF4444] flex items-center justify-center text-white">
                         <div className="w-2 h-2 rounded-full bg-white" />
                       </div>
-                      <div className="font-bold text-[#111827] mb-3">{booking.dropoff}</div>
+                      <div className="font-bold text-[#111827] mb-3">{booking.dropoff_location}</div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input 
                           type="text" 
@@ -239,8 +239,8 @@ export default function BookingDetailsPage() {
                       <CreditCard size={18} className="text-[#6b7280]" />
                       <select 
                         className="bg-transparent text-xs font-bold text-[#111827] outline-none border-none p-0 cursor-pointer"
-                        value={booking.paymentMethod}
-                        onChange={e => setBooking({ paymentMethod: e.target.value as any })}
+                        value={booking.payment_method}
+                        onChange={e => setBooking({ payment_method: e.target.value as any })}
                       >
                         <option value="cash">Cash by Recipient</option>
                         <option value="card">Credit/Debit Card</option>

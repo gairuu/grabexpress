@@ -59,20 +59,20 @@ export interface Delivery {
 
 export interface BookingState {
   id: string;
-  pickup: string;
-  dropoff: string;
-  fee: number;
+  pickup_location: string;
+  dropoff_location: string;
+  delivery_fee: number;
   driver: Driver | null;
-  status: DeliveryStatus;
-  paymentMethod: PaymentMethod;
-  senderName: string;
-  senderPhone: string;
-  recipientName: string;
-  recipientPhone: string;
-  itemSize: 'S' | 'M' | 'L' | 'XL';
-  itemWeight: number;
-  itemType: string;
-  vehicleType: VehicleType;
+  delivery_status: DeliveryStatus;
+  payment_method: PaymentMethod;
+  sender_name: string;
+  sender_phone: string;
+  recipient_name: string;
+  recipient_phone: string;
+  item_size: 'S' | 'M' | 'L' | 'XL';
+  item_weight: number;
+  item_type: string;
+  vehicle_type: VehicleType;
 }
 
 export interface AppUser {

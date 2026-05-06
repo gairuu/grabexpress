@@ -18,7 +18,7 @@ export default function MatchingPage() {
   const [createdDeliveryId, setCreatedDeliveryId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (loading || !user || !booking.pickup || hasBooked.current) return;
+    if (loading || !user || !booking.pickup_location || hasBooked.current) return;
     hasBooked.current = true;
 
     const runBookingFlow = async () => {
@@ -111,7 +111,7 @@ export default function MatchingPage() {
               </div>
               <div>
                 <div className="text-xs uppercase font-bold tracking-widest text-[#9ca3af]">Routing</div>
-                <div className="w-48 truncate text-sm font-semibold text-[#111827]">{booking.pickup} → {booking.dropoff}</div>
+                <div className="w-48 truncate text-sm font-semibold text-[#111827]">{booking.pickup_location} → {booking.dropoff_location}</div>
               </div>
             </div>
 

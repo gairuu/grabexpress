@@ -38,7 +38,7 @@ export default function DashboardPage() {
     return null;
   }
 
-  const topDropoffs = Array.from(new Set(deliveries.map((d) => d.dropoff))).slice(0, 5);
+  const topDropoffs = Array.from(new Set(deliveries.map((d) => d.dropoff_location))).slice(0, 5);
 
   return (
     <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937]">
