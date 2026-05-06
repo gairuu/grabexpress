@@ -22,9 +22,17 @@ export default function DriverDashboardPage() {
     
     setLoadingId(id);
     setActionError(null);
+
+    const safetyTimeout = setTimeout(() => {
+      setLoadingId(null);
+      setActionError('The update is taking longer than expected. Please check your connection.');
+    }, 12000);
+
     try {
       await updateDeliveryStatus(id, status);
+      clearTimeout(safetyTimeout);
     } catch (err: any) {
+      clearTimeout(safetyTimeout);
       setActionError(err.message || 'Failed to update status. Please try again.');
     } finally {
       setLoadingId(null);

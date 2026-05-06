@@ -342,26 +342,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchDeliveries]);
 
   const updateDeliveryStatus = useCallback(async (deliveryId: string, status: DeliveryStatus) => {
-    const { data: currentDel } = await supabase.from('deliveries').select('*').eq('id', deliveryId).single();
+    // 1. Fetch current delivery state with a timeout
+    const fetchPromise = supabase.from('deliveries').select('*').eq('id', deliveryId).maybeSingle();
     
-    const { error } = await supabase
+    // Safety timeout for the fetch
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database request timed out')), 10000)
+    );
+
+    const { data: currentDel, error: fetchError } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
+    if (fetchError) {
+      console.error('Error fetching current delivery:', fetchError.message);
+      throw new Error(`Failed to fetch delivery details: ${fetchError.message}`);
+    }
+
+    if (!currentDel) {
+      throw new Error('Delivery not found in database.');
+    }
+    
+    // 2. Perform the update
+    const { error: updateError } = await supabase
       .from('deliveries')
       .update({ status })
       .eq('id', deliveryId);
 
-    if (error) {
-      console.error('Error updating status:', error.message, error.code);
-      throw new Error(`Failed to update status: ${error.message}`);
+    if (updateError) {
+      console.error('Error updating status:', updateError.message, updateError.code);
+      throw new Error(`Failed to update status: ${updateError.message}`);
     }
 
-    // Handle completed or cancelled delivery (Business Rules)
+    // 3. Handle business rules (driver availability, payments)
     if ((status === 'delivered' || status === 'cancelled') && currentDel) {
-      // 1. Mark driver as available again
       if (currentDel.driver_id) {
         await supabase.from('drivers').update({ is_available: true }).eq('id', currentDel.driver_id);
       }
       
-      // 2. Record formal payment only for 'delivered' status
       if (status === 'delivered') {
         try {
           await supabase.from('payments').insert({
@@ -371,12 +387,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
             payment_status: 'completed'
           });
         } catch (paymentErr) {
-          console.warn('Payment record insert failed (table may not exist yet):', paymentErr);
+          console.warn('Payment record insert failed:', paymentErr);
         }
       }
     }
 
-    fetchDeliveries();
+    await fetchDeliveries();
   }, [fetchDeliveries]);
 
   const findAvailableDriver = useCallback(async () => {
