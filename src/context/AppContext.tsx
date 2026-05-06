@@ -351,40 +351,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchDeliveries]);
 
   const findAvailableDriver = useCallback(async () => {
-    // For demo: reset ALL drivers to available first so the app never gets stuck
-    await supabase.from('drivers').update({ is_available: true }).neq('id', '00000000-0000-0000-0000-000000000000');
+    // For demo: reset ALL drivers to available first so the app never gets stuck.
+    // We do this without 'await' so it doesn't block the search, and wrap in try-catch.
+    supabase.from('drivers')
+      .update({ is_available: true })
+      .neq('id', '00000000-0000-0000-0000-000000000000')
+      .then(({ error }) => {
+        if (error) console.warn('Background driver reset failed:', error.message);
+      })
+      .catch(err => console.warn('Background driver reset error:', err));
 
     // Use maybeSingle() so it returns null (not an error) when no rows found
-    const { data, error } = await supabase
-      .from('drivers')
-      .select('*, profiles(name, avatar_url, phone)')
-      .eq('is_available', true)
-      .limit(1)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('*, profiles(name, avatar_url, phone)')
+        .eq('is_available', true)
+        .limit(1)
+        .maybeSingle();
 
-    if (error) {
-      console.error('findAvailableDriver error:', error.message, error.code);
+      if (error) {
+        console.error('findAvailableDriver DB error:', error.message, error.code);
+        return null;
+      }
+
+      if (!data) {
+        console.warn('No available drivers found in database.');
+        return null;
+      }
+
+      const profiles = data.profiles as any;
+
+      return {
+        id: data.id,
+        name: profiles?.name || 'Driver',
+        avatar: profiles?.name ? profiles.name.slice(0, 2).toUpperCase() : 'DR',
+        vehicle: data.vehicle_type,
+        plateNumber: data.plate_number,
+        rating: data.rating,
+        totalDeliveries: 0,
+        isAvailable: data.is_available,
+        phone: profiles?.phone || '',
+      };
+    } catch (err) {
+      console.error('findAvailableDriver unexpected error:', err);
       return null;
     }
-
-    if (!data) {
-      console.warn('No available drivers found in database.');
-      return null;
-    }
-
-    const profiles = data.profiles as any;
-
-    return {
-      id: data.id,
-      name: profiles?.name || 'Driver',
-      avatar: profiles?.name ? profiles.name.slice(0, 2).toUpperCase() : 'DR',
-      vehicle: data.vehicle_type,
-      plateNumber: data.plate_number,
-      rating: data.rating,
-      totalDeliveries: 0,
-      isAvailable: data.is_available,
-      phone: profiles?.phone || '',
-    };
   }, []);
 
   // ── Booking (local state, same as before) ──

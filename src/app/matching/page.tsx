@@ -12,6 +12,7 @@ export default function MatchingPage() {
   const router = useRouter();
 
   const [errorMsg, setErrorMsg] = useState('');
+  const [showRetry, setShowRetry] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
 
   useEffect(() => {
@@ -29,13 +30,13 @@ export default function MatchingPage() {
           setIsMatching(false);
         } else {
           // Handle case where no drivers are available
-          setErrorMsg("No available drivers right now! Please try again later.");
-          setTimeout(() => router.push('/book'), 3000);
+          setErrorMsg("No available drivers right now! Please ensure you have run the mock-drivers script in Supabase.");
+          setShowRetry(true);
         }
       } catch (err) {
         console.error("Error matching driver:", err);
-        setErrorMsg("Error finding a driver. Please try again.");
-        setTimeout(() => router.push('/book'), 3000);
+        setErrorMsg("Error finding a driver. Please check your connection.");
+        setShowRetry(true);
       }
     };
 
@@ -43,8 +44,16 @@ export default function MatchingPage() {
       matchDriver();
     }, 3500);
 
-    return () => clearTimeout(timer);
-  }, [booking.pickup, router, setBooking, loading, findAvailableDriver]);
+    // Show retry button if it takes too long
+    const retryTimer = setTimeout(() => {
+      if (isMatching) setShowRetry(true);
+    }, 12000);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(retryTimer);
+    };
+  }, [booking.pickup, router, setBooking, loading, findAvailableDriver, isMatching]);
 
   const handleStart = async () => {
     if (isStarting) return;
@@ -131,6 +140,17 @@ export default function MatchingPage() {
                 <div className="w-48 truncate text-sm font-semibold text-[#111827]">{booking.pickup} → {booking.dropoff}</div>
               </div>
             </div>
+
+            {showRetry && (
+              <div className="pt-8 fade-in">
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="px-6 py-3 bg-white border border-[#e5e7eb] rounded-xl font-bold text-sm hover:bg-gray-50 transition-all shadow-sm"
+                >
+                  Still searching... Try again?
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="w-full max-w-md space-y-8 fade-in">
