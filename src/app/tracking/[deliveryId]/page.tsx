@@ -1,78 +1,98 @@
 'use client';
-import { Flag } from 'lucide-react';
+import { Flag, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import Navbar from '@/components/Navbar';
 import DriverCard from '@/components/DriverCard';
 import StatusTimeline from '@/components/StatusTimeline';
-import { DeliveryStatus } from '@/lib/types';
+import { DeliveryStatus, Delivery } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 
 export default function TrackingByIdPage() {
-  const { booking, user, loading, deliveries, fetchDeliveries } = useApp();
+  const { booking, user, loading } = useApp();
   const params = useParams<{ deliveryId: string }>();
   const router = useRouter();
-  const [verified, setVerified] = useState(false);
+  
+  const [delivery, setDelivery] = useState<Delivery | null>(null);
+  const [isVerifying, setIsVerifying] = useState(true);
 
-  // Verify the delivery exists in the DB directly — avoids race condition
-  // where booking state hasn't updated yet right after navigation
+  const fetchCurrentStatus = async () => {
+    if (!params.deliveryId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('deliveries')
+        .select('*')
+        .eq('id', params.deliveryId)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (data) {
+        // Map DB row to our Delivery type
+        const mapped: Delivery = {
+          id: data.id,
+          customerId: data.customer_id,
+          customerName: data.customer_name,
+          driverId: data.driver_id || '',
+          driverName: data.driver_name || '',
+          pickup: data.pickup_location,
+          dropoff: data.dropoff_location,
+          status: data.status as DeliveryStatus,
+          fee: data.fee,
+          paymentMethod: data.payment_method,
+          estimatedTime: data.estimated_time,
+          createdAt: data.created_at,
+          senderName: data.sender_name,
+          senderPhone: data.sender_phone,
+          recipientName: data.recipient_name,
+          recipientPhone: data.recipient_phone,
+          itemSize: data.item_size,
+          itemWeight: data.item_weight,
+          itemType: data.item_type,
+          vehicleType: data.vehicle_type,
+        };
+        setDelivery(mapped);
+      } else {
+        console.error("Delivery not found:", params.deliveryId);
+        router.push('/book');
+      }
+    } catch (err) {
+      console.error("Error fetching status:", err);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   useEffect(() => {
     if (loading) return;
-    if (!params.deliveryId) { router.push('/book'); return; }
+    fetchCurrentStatus();
 
-    const verify = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('deliveries')
-          .select('*')
-          .eq('id', params.deliveryId)
-          .maybeSingle();
-
-        if (error) throw error;
-        
-        if (!data) {
-          console.error("Delivery not found in DB:", params.deliveryId);
-          router.push('/book');
-        } else {
-          setVerified(true);
-          await fetchDeliveries();
-        }
-      } catch (err) {
-        console.error("Verification error:", err);
-        // Retry once after 2 seconds
-        setTimeout(verify, 2000);
-      }
-    };
-
-    verify();
-  }, [params.deliveryId, loading, fetchDeliveries, router]);
-
-  useEffect(() => {
-    if (!verified) return;
-    // Poll every 2 seconds for real-time status updates
-    const interval = setInterval(() => {
-      fetchDeliveries();
-    }, 2000);
+    // Poll every 3 seconds for status changes
+    const interval = setInterval(fetchCurrentStatus, 3000);
     return () => clearInterval(interval);
-  }, [verified, fetchDeliveries]);
+  }, [params.deliveryId, loading]);
 
-  // Find the real status from the database, fallback to booking state
-  const currentDelivery = deliveries.find(d => d.id === params.deliveryId);
-  const realStatus = currentDelivery?.status || booking.status || 'pending';
-  // Use driver from DB delivery or booking state
-  const driver = booking.driver || null;
+  // Use state delivery or fallback to context booking
+  const realStatus = delivery?.status || booking.status || 'pending';
+  const displayDriver = delivery?.driverId ? {
+    id: delivery.driverId,
+    name: delivery.driverName,
+    avatar: (delivery.driverName || 'DR').slice(0, 2).toUpperCase(),
+    vehicle: delivery.vehicleType || 'Motorcycle',
+    rating: 5.0,
+    totalDeliveries: 0,
+    isAvailable: false,
+    phone: '',
+  } : booking.driver;
 
-  // ── Mock Location Simulation ──
   const [progress, setProgress] = useState(0);
   
   useEffect(() => {
     if (realStatus === 'in_transit') {
       const interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) return 100;
-          return prev + 1; // 1% every 200ms = 20 seconds total
-        });
+        setProgress((prev) => (prev >= 100 ? 100 : prev + 1));
       }, 200);
       return () => clearInterval(interval);
     } else if (realStatus === 'delivered') {
@@ -80,8 +100,13 @@ export default function TrackingByIdPage() {
     }
   }, [realStatus]);
 
-  if (loading || !verified) {
-    return <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center"><div className="text-[#6b7280]">Loading...</div></div>;
+  if (loading || isVerifying) {
+    return (
+      <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center flex-col gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00B14F]"></div>
+        <div className="text-[#6b7280] font-medium">Verifying delivery status...</div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -94,9 +119,16 @@ export default function TrackingByIdPage() {
       <Navbar />
 
       <main className="flex-1 w-full max-w-4xl mx-auto p-6 md:p-10">
-        <header className="mb-10 text-center">
+        <header className="mb-10 text-center relative">
           <h1 className="text-3xl font-extrabold text-[#111827] mb-2">Delivery in Progress</h1>
           <p className="text-[#6b7280]">Real-time status updates for your package.</p>
+          <button 
+            onClick={fetchCurrentStatus}
+            className="absolute right-0 top-0 p-2 text-gray-400 hover:text-[#00B14F] transition-colors"
+            title="Manual Refresh"
+          >
+            <RefreshCw size={20} />
+          </button>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
@@ -105,7 +137,6 @@ export default function TrackingByIdPage() {
               <h3 className="text-lg font-bold text-[#111827] mb-8">Tracking Details</h3>
               <StatusTimeline currentStatus={realStatus} />
               
-              {/* Mock Location Progress Bar */}
               {(realStatus === 'in_transit' || realStatus === 'delivered') && (
                 <div className="mt-10 pt-10 border-t border-[#f3f4f6]">
                   <div className="flex justify-between items-center mb-4">
@@ -118,23 +149,18 @@ export default function TrackingByIdPage() {
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="mt-4 text-sm text-[#6b7280]">
-                    {realStatus === 'delivered' 
-                      ? 'Package has arrived!' 
-                      : `Driver is currently ${progress < 50 ? 'near the pickup point' : 'en route to the drop-off'}.`}
-                  </p>
                 </div>
               )}
 
               {realStatus === 'delivered' && (
-                <div className="mt-10 p-6 bg-[var(--grab-green)]/10 border border-[var(--grab-green)]/30 rounded-2xl fade-in">
+                <div className="mt-10 p-6 bg-[#00B14F]/10 border border-[#00B14F]/30 rounded-2xl fade-in">
                   <div className="flex items-center gap-4">
-                    <div className="text-[#00B14F]">
+                    <div className="text-[#00B14F] animate-bounce">
                       <Flag size={32} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <h4 className="font-bold text-[#111827]">Arrival!</h4>
-                      <p className="text-sm text-[#6b7280]">Your package has been delivered to the destination.</p>
+                      <h4 className="font-bold text-[#111827]">Package Delivered!</h4>
+                      <p className="text-sm text-[#6b7280]">Your package has arrived at its destination.</p>
                     </div>
                   </div>
                 </div>
@@ -145,25 +171,24 @@ export default function TrackingByIdPage() {
           <div className="md:col-span-2 space-y-6">
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-[#9ca3af] uppercase tracking-widest px-1">Your Driver</h3>
-              {booking.driver && <DriverCard driver={booking.driver} compact />}
+              {displayDriver && <DriverCard driver={displayDriver as any} compact />}
             </div>
 
             <div className="rounded-xl border border-[#e5e7eb] bg-white p-6 shadow-sm space-y-6">
               <h3 className="text-sm font-bold text-[#9ca3af] uppercase tracking-widest">Route Summary</h3>
-
               <div className="space-y-4">
                 <div className="flex gap-4">
-                  <div className="w-2 h-2 rounded-full bg-[var(--grab-green)] mt-1.5 flex-shrink-0"></div>
+                  <div className="w-2 h-2 rounded-full bg-[#00B14F] mt-1.5 flex-shrink-0"></div>
                   <div>
                     <div className="text-[10px] text-[#9ca3af] uppercase font-bold">Pickup</div>
-                    <div className="text-sm text-[#111827] font-medium">{booking.pickup}</div>
+                    <div className="text-sm text-[#111827] font-medium">{delivery?.pickup || booking.pickup}</div>
                   </div>
                 </div>
                 <div className="flex gap-4">
                   <div className="w-2 h-2 rounded bg-red-400 mt-1.5 flex-shrink-0"></div>
                   <div>
                     <div className="text-[10px] text-[#9ca3af] uppercase font-bold">Drop-off</div>
-                    <div className="text-sm text-[#111827] font-medium">{booking.dropoff}</div>
+                    <div className="text-sm text-[#111827] font-medium">{delivery?.dropoff || booking.dropoff}</div>
                   </div>
                 </div>
               </div>
@@ -171,7 +196,7 @@ export default function TrackingByIdPage() {
 
             {realStatus === 'delivered' && (
               <button
-                onClick={() => router.push(`/payment/${booking.id}`)}
+                onClick={() => router.push(`/payment/${params.deliveryId}`)}
                 className="btn-primary py-4 text-lg font-bold grab-glow w-full fade-in"
               >
                 Proceed to Payment
