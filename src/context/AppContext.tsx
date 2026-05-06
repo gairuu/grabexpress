@@ -451,6 +451,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // 3. Mark driver busy
     await supabase.from('drivers').update({ is_available: false }).eq('id', driver.id);
 
+    // 4. Update local booking state for the UI
+    setBookingState(prev => ({
+      ...prev,
+      id: delivery.id,
+      driver: {
+        id: driver.id,
+        name: driver.profiles?.name || 'Driver',
+        avatar: (driver.profiles?.name || 'DR').slice(0, 2).toUpperCase(),
+        vehicle: driver.vehicle_type,
+        plateNumber: driver.plate_number,
+        rating: driver.rating,
+        totalDeliveries: 0,
+        isAvailable: false,
+        phone: driver.profiles?.phone || '',
+      }
+    }));
+
     await fetchDeliveries();
     return delivery.id;
   }, [fetchDeliveries]);

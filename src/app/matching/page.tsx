@@ -13,9 +13,11 @@ export default function MatchingPage() {
 
   const [errorMsg, setErrorMsg] = useState('');
   const [showRetry, setShowRetry] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [createdDeliveryId, setCreatedDeliveryId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (loading || !user || !booking.pickup) return;
+    if (loading || !user || !booking.pickup || createdDeliveryId) return;
 
     const runBookingFlow = async () => {
       try {
@@ -44,7 +46,8 @@ export default function MatchingPage() {
           vehicleType: booking.vehicleType,
         });
 
-        router.push(`/tracking/${deliveryId}`);
+        setCreatedDeliveryId(deliveryId);
+        setIsMatching(false);
       } catch (err: any) {
         console.error("Booking flow failed:", err);
         setErrorMsg(err.message || "No drivers found. Please ensure a driver is online and try again.");
@@ -54,7 +57,13 @@ export default function MatchingPage() {
     };
 
     runBookingFlow();
-  }, [user, booking, loading, bookAndMatch, router]);
+  }, [user, booking, loading, bookAndMatch, createdDeliveryId]);
+
+  const handleStart = () => {
+    if (!createdDeliveryId) return;
+    setIsStarting(true);
+    router.push(`/tracking/${createdDeliveryId}`);
+  };
 
   if (loading) {
     return <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center"><div className="text-[#6b7280]">Loading...</div></div>;
