@@ -52,7 +52,7 @@ export default function DriverDashboardPage() {
       await updateDeliveryStatus(id, status);
       clearTimeout(safetyTimeout);
       // Re-fetch driver status after finishing a job
-      if (status === 'delivered' || status === 'cancelled') {
+      if ((status === 'delivered' || status === 'cancelled') && user) {
         const { data } = await supabase.from('drivers').select('status').eq('id', user.id).maybeSingle();
         if (data) setDriverStatus(data.status as any);
       }
