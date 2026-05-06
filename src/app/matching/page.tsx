@@ -56,15 +56,21 @@ export default function MatchingPage() {
   }, [booking.pickup, router, setBooking, loading, findAvailableDriver, isMatching]);
 
   const handleStart = async () => {
-    if (isStarting) return;
+    if (isStarting || !booking.driver) return;
+    
     setIsStarting(true);
-    try {
-      if (!user) throw new Error('Not logged in. Please refresh and try again.');
-      if (!booking.driver) throw new Error('No driver assigned. Please go back and book again.');
+    setErrorMsg('');
 
-      const newDeliveryId = await addDelivery({
-        customerId: user.id,
-        customerName: user.name || 'Unknown',
+    // Safety timeout: reset button if it takes more than 10 seconds
+    const safetyTimeout = setTimeout(() => {
+      setIsStarting(false);
+      setErrorMsg("Starting the delivery is taking longer than expected. Please check your connection.");
+    }, 12000);
+
+    try {
+      const deliveryId = await addDelivery({
+        customerId: user?.id || '',
+        customerName: user?.name || 'Customer',
         driverId: booking.driver.id,
         driverName: booking.driver.name,
         pickup: booking.pickup,
@@ -72,8 +78,7 @@ export default function MatchingPage() {
         status: 'pending',
         fee: booking.fee,
         paymentMethod: booking.paymentMethod,
-        createdAt: new Date().toISOString(),
-        estimatedTime: '25 mins',
+        estimatedTime: '25-35 mins',
         senderName: booking.senderName,
         senderPhone: booking.senderPhone,
         recipientName: booking.recipientName,
@@ -84,10 +89,11 @@ export default function MatchingPage() {
         vehicleType: booking.vehicleType,
       });
 
-      setBooking({ id: newDeliveryId });
-      router.push(`/tracking/${newDeliveryId}`);
+      clearTimeout(safetyTimeout);
+      router.push(`/tracking/${deliveryId}`);
     } catch (err: any) {
-      console.error('Failed to create delivery:', err);
+      clearTimeout(safetyTimeout);
+      console.error('Start delivery error:', err);
       setIsStarting(false);
       setErrorMsg(err.message || 'Failed to start delivery. Please try again.');
     }

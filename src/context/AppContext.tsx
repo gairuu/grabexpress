@@ -282,7 +282,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // Mark driver as unavailable immediately (Business Rule: one active delivery)
     if (d.driverId) {
-      await supabase.from('drivers').update({ is_available: false }).eq('id', d.driverId);
+      try {
+        const { error: updateErr } = await supabase.from('drivers').update({ is_available: false }).eq('id', d.driverId);
+        if (updateErr) console.warn('Non-critical: Failed to update driver availability:', updateErr.message);
+      } catch (e) {
+        console.warn('Non-critical: Driver availability update exception:', e);
+      }
     }
 
     fetchDeliveries();
