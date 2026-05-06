@@ -342,15 +342,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchDeliveries]);
 
   const findAvailableDriver = useCallback(async () => {
-    // Fetch a real driver from Supabase who is available
+    // For demo: reset ALL drivers to available first so the app never gets stuck
+    await supabase.from('drivers').update({ is_available: true }).neq('id', '00000000-0000-0000-0000-000000000000');
+
+    // Use maybeSingle() so it returns null (not an error) when no rows found
     const { data, error } = await supabase
       .from('drivers')
       .select('*, profiles(name, avatar_url, phone)')
       .eq('is_available', true)
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      console.error('findAvailableDriver error:', error.message, error.code);
+      return null;
+    }
+
+    if (!data) {
+      console.warn('No available drivers found in database.');
       return null;
     }
 
