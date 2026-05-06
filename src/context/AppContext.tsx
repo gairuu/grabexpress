@@ -82,11 +82,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const profile = await fetchProfile(session.user.id);
-        setUser(profile);
+      try {
+        if (session?.user) {
+          const profile = await fetchProfile(session.user.id);
+          setUser(profile);
+        }
+      } catch (err) {
+        console.error("Auth initialization profile fetch failed:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     // Listen for auth changes

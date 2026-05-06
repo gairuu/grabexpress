@@ -51,11 +51,9 @@ export default function SuccessModal({ onClose, amount, method }: Props) {
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
-          <Link href="/dashboard" style={{ flex: 1, textDecoration: 'none' }}>
-            <button className="btn-primary" style={{ width: '100%' }} onClick={onClose}>
-              Back to Dashboard
-            </button>
-          </Link>
+          <button className="btn-primary" style={{ width: '100%', flex: 1 }} onClick={onClose}>
+            Back to Dashboard
+          </button>
         </div>
       </div>
     </div>
