@@ -1,11 +1,11 @@
 import { Customer, Driver, Delivery } from './types';
 
 export const mockCustomers: Customer[] = [
-  { id: '11111111-1111-1111-1111-111111111111', name: 'Maria Santos', email: 'maria@email.com', phone: '09171234567', avatar: 'MS', totalDeliveries: 24, joinedDate: '2024-01-15' },
-  { id: '22222222-2222-2222-2222-222222222222', name: 'Juan Dela Cruz', email: 'juan@email.com', phone: '09281234567', avatar: 'JD', totalDeliveries: 11, joinedDate: '2024-03-02' },
-  { id: '33333333-3333-3333-3333-333333333333', name: 'Ana Reyes', email: 'ana@email.com', phone: '09391234567', avatar: 'AR', totalDeliveries: 37, joinedDate: '2023-11-20' },
-  { id: '44444444-4444-4444-4444-444444444444', name: 'Carlos Mendoza', email: 'carlos@email.com', phone: '09451234567', avatar: 'CM', totalDeliveries: 8, joinedDate: '2024-05-10' },
-  { id: '55555555-5555-5555-5555-555555555555', name: 'Lea Gonzales', email: 'lea@email.com', phone: '09561234567', avatar: 'LG', totalDeliveries: 19, joinedDate: '2024-02-28' },
+  { id: '11111111-1111-1111-1111-111111111111', name: 'Maria Santos', email: 'maria@email.com', contact_number: '09171234567', avatar: 'MS', totalDeliveries: 24, registration_date: '2024-01-15' },
+  { id: '22222222-2222-2222-2222-222222222222', name: 'Juan Dela Cruz', email: 'juan@email.com', contact_number: '09281234567', avatar: 'JD', totalDeliveries: 11, registration_date: '2024-03-02' },
+  { id: '33333333-3333-3333-3333-333333333333', name: 'Ana Reyes', email: 'ana@email.com', contact_number: '09391234567', avatar: 'AR', totalDeliveries: 37, registration_date: '2023-11-20' },
+  { id: '44444444-4444-4444-4444-444444444444', name: 'Carlos Mendoza', email: 'carlos@email.com', contact_number: '09451234567', avatar: 'CM', totalDeliveries: 8, registration_date: '2024-05-10' },
+  { id: '55555555-5555-5555-5555-555555555555', name: 'Lea Gonzales', email: 'lea@email.com', contact_number: '09561234567', avatar: 'LG', totalDeliveries: 19, registration_date: '2024-02-28' },
 ];
 
 export const mockDrivers: Driver[] = [

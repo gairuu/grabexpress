@@ -479,7 +479,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       plate_number: driver.plate_number,
       rating: driver.rating,
       totalDeliveries: 0,
-      status: 'busy',
+      status: 'busy' as const,
       contact_number: driver.profiles?.contact_number || '',
     };
 
