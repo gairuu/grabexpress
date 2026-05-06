@@ -137,12 +137,6 @@ export default function MatchingPage() {
                 >
                   Still searching... Try again?
                 </button>
-                <button 
-                  onClick={forceMatch} 
-                  className="px-6 py-3 bg-[#00B14F] text-white rounded-xl font-bold text-sm hover:bg-[#009940] transition-all shadow-md"
-                >
-                  Force Match (Demo Mode)
-                </button>
               </div>
             )}
           </div>
