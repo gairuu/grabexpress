@@ -380,15 +380,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchDeliveries]);
 
   const findAvailableDriver = useCallback(async () => {
-    // For demo: reset ALL drivers to available first so the app never gets stuck.
-    // We do this in the background and log errors if they happen.
-    supabase.from('drivers')
-      .update({ is_available: true })
-      .neq('id', '00000000-0000-0000-0000-000000000000')
-      .then(({ error }) => {
-        if (error) console.warn('Background driver reset failed:', error.message);
-      });
-
     // Use maybeSingle() so it returns null (not an error) when no rows found
     try {
       const { data, error } = await supabase
