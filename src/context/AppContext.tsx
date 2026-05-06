@@ -17,6 +17,7 @@ interface AppContextType {
   addDelivery: (d: Omit<Delivery, 'id'>) => Promise<string>;
   updateDelivery: (deliveryId: string, updates: Partial<Delivery>) => Promise<void>;
   updateDeliveryStatus: (deliveryId: string, status: DeliveryStatus) => Promise<void>;
+  acceptDelivery: (deliveryId: string, driver: { id: string; name: string }) => Promise<void>;
   findAvailableDriver: () => Promise<any>;
   setBooking: (b: Partial<BookingState>) => void;
   resetBooking: () => void;
@@ -500,6 +501,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addDelivery,
         updateDelivery,
         updateDeliveryStatus,
+        acceptDelivery,
         findAvailableDriver,
         setBooking,
         resetBooking,
