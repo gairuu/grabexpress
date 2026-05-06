@@ -372,15 +372,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchDeliveries]);
 
   const updateDeliveryStatus = useCallback(async (deliveryId: string, status: DeliveryStatus) => {
-    // 1. Fetch current delivery state with a timeout
-    const fetchPromise = supabase.from('deliveries').select('*').eq('id', deliveryId).maybeSingle();
-    
-    // Safety timeout for the fetch
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Database request timed out')), 10000)
-    );
-
-    const { data: currentDel, error: fetchError } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+    // 1. Fetch current delivery state
+    const { data: currentDel, error: fetchError } = await supabase.from('deliveries').select('*').eq('id', deliveryId).maybeSingle();
 
     if (fetchError) {
       console.error('Error fetching current delivery:', fetchError.message);
