@@ -276,9 +276,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }).select('id').single();
 
     if (error) {
-      console.error('Error adding delivery:', error);
-      alert('DATABASE ERROR: ' + error.message + '\nCode: ' + error.code + '\nDetails: ' + error.details);
-      throw error;
+      console.error('addDelivery DB error:', error.message, '| code:', error.code, '| details:', error.details, '| hint:', error.hint);
+      throw new Error(`DB Error: ${error.message}`);
     }
 
     // Mark driver as unavailable immediately (Business Rule: one active delivery)

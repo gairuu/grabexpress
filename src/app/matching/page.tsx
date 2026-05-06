@@ -12,6 +12,7 @@ export default function MatchingPage() {
   const router = useRouter();
 
   const [errorMsg, setErrorMsg] = useState('');
+  const [isStarting, setIsStarting] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -46,12 +47,17 @@ export default function MatchingPage() {
   }, [booking.pickup, router, setBooking, loading, findAvailableDriver]);
 
   const handleStart = async () => {
+    if (isStarting) return;
+    setIsStarting(true);
     try {
+      if (!user) throw new Error('Not logged in. Please refresh and try again.');
+      if (!booking.driver) throw new Error('No driver assigned. Please go back and book again.');
+
       const newDeliveryId = await addDelivery({
-        customerId: user?.id || '',
-        customerName: user?.name || 'Unknown',
-        driverId: booking.driver?.id || '',
-        driverName: booking.driver?.name || 'Unassigned',
+        customerId: user.id,
+        customerName: user.name || 'Unknown',
+        driverId: booking.driver.id,
+        driverName: booking.driver.name,
         pickup: booking.pickup,
         dropoff: booking.dropoff,
         status: 'pending',
@@ -68,13 +74,13 @@ export default function MatchingPage() {
         itemType: booking.itemType,
         vehicleType: booking.vehicleType,
       });
-      
-      // Update global booking state with the real DB id
+
       setBooking({ id: newDeliveryId });
       router.push(`/tracking/${newDeliveryId}`);
     } catch (err: any) {
       console.error('Failed to create delivery:', err);
-      alert('FRONTEND ERROR: ' + (err.message || 'Unknown error'));
+      setIsStarting(false);
+      setErrorMsg(err.message || 'Failed to start delivery. Please try again.');
     }
   };
 
@@ -139,8 +145,17 @@ export default function MatchingPage() {
             {booking.driver && <DriverCard driver={booking.driver} />}
 
             <div className="pt-4">
-              <button onClick={handleStart} className="btn-primary py-4 text-lg font-bold grab-glow">
-                Confirm & Start Delivery
+              {errorMsg && (
+                <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700 font-medium">
+                  ⚠️ {errorMsg}
+                </div>
+              )}
+              <button
+                onClick={handleStart}
+                disabled={isStarting}
+                className={`btn-primary py-4 text-lg font-bold grab-glow ${isStarting ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                {isStarting ? 'Starting delivery...' : 'Confirm & Start Delivery'}
               </button>
               <button onClick={() => router.push('/book')} className="btn-ghost mt-4 border-none text-red-400 hover:bg-red-400/10">
                 Cancel Booking
