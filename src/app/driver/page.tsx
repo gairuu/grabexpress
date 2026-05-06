@@ -11,6 +11,20 @@ import StatsCard from '@/components/StatsCard';
 export default function DriverDashboardPage() {
   const { user, loading, deliveries, updateDeliveryStatus, fetchDeliveries } = useApp();
   const router = useRouter();
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const handleStatusUpdate = async (id: string, status: 'in_transit' | 'delivered') => {
+    setLoadingId(id);
+    setActionError(null);
+    try {
+      await updateDeliveryStatus(id, status);
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to update status. Please try again.');
+    } finally {
+      setLoadingId(null);
+    }
+  };
 
   useEffect(() => {
     if (loading) return;
@@ -56,6 +70,11 @@ export default function DriverDashboardPage() {
           </div>
         </header>
 
+        {actionError && (
+          <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700 font-medium">
+            ⚠️ {actionError}
+          </div>
+        )}
         <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
           <StatsCard icon={Clock} label="Pending Pickups" value={stats.pending} />
           <StatsCard icon={Truck} label="In Transit" value={stats.active} color="#3B82F6" />
@@ -92,18 +111,20 @@ export default function DriverDashboardPage() {
                     <div className="flex gap-2">
                       {job.status === 'pending' && (
                         <button
-                          className="rounded-md bg-[#00B14F] px-3 py-2 text-xs font-semibold text-white hover:bg-[#009940]"
-                          onClick={() => updateDeliveryStatus(job.id, 'in_transit')}
+                          className="rounded-md bg-[#00B14F] px-3 py-2 text-xs font-semibold text-white hover:bg-[#009940] disabled:opacity-60"
+                          disabled={loadingId === job.id}
+                          onClick={() => handleStatusUpdate(job.id, 'in_transit')}
                         >
-                          Start Delivery
+                          {loadingId === job.id ? 'Updating...' : 'Start Delivery'}
                         </button>
                       )}
                       {job.status === 'in_transit' && (
                         <button
-                          className="rounded-md bg-[var(--grab-green)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--grab-green-dark)]"
-                          onClick={() => updateDeliveryStatus(job.id, 'delivered')}
+                          className="rounded-md bg-[var(--grab-green)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--grab-green-dark)] disabled:opacity-60"
+                          disabled={loadingId === job.id}
+                          onClick={() => handleStatusUpdate(job.id, 'delivered')}
                         >
-                          Mark Delivered
+                          {loadingId === job.id ? 'Updating...' : 'Mark Delivered'}
                         </button>
                       )}
                     </div>

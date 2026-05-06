@@ -318,8 +318,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .eq('id', deliveryId);
 
     if (error) {
-      console.error('Error updating status:', error);
-      throw error;
+      console.error('Error updating status:', error.message, error.code);
+      throw new Error(`Failed to update status: ${error.message}`);
     }
 
     // Handle completed delivery (Business Rules)
@@ -328,13 +328,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (currentDel.driver_id) {
         await supabase.from('drivers').update({ is_available: true }).eq('id', currentDel.driver_id);
       }
-      // 2. Record formal payment
-      await supabase.from('payments').insert({
-        delivery_id: deliveryId,
-        amount: currentDel.fee,
-        payment_method: currentDel.payment_method,
-        payment_status: 'completed'
-      });
+      // 2. Record formal payment (wrapped in try-catch so missing table doesn't break flow)
+      try {
+        await supabase.from('payments').insert({
+          delivery_id: deliveryId,
+          amount: currentDel.fee,
+          payment_method: currentDel.payment_method,
+          payment_status: 'completed'
+        });
+      } catch (paymentErr) {
+        console.warn('Payment record insert failed (table may not exist yet):', paymentErr);
+      }
     }
 
     fetchDeliveries();
