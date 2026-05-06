@@ -72,8 +72,9 @@ export default function MatchingPage() {
       // Update global booking state with the real DB id
       setBooking({ id: newDeliveryId });
       router.push(`/tracking/${newDeliveryId}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create delivery:', err);
+      alert('FRONTEND ERROR: ' + (err.message || 'Unknown error'));
     }
   };
 
