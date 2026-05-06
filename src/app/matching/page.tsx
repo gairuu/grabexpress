@@ -40,6 +40,44 @@ export default function MatchingPage() {
       }
     };
 
+    const forceMatch = async () => {
+      setIsMatching(true);
+      setErrorMsg('');
+      setShowRetry(false);
+      try {
+        // Fetch ANY driver, even if they are 'offline' for the demo
+        const { data, error } = await supabase
+          .from('drivers')
+          .select('*, profiles(name, avatar_url, phone)')
+          .limit(1)
+          .maybeSingle();
+
+        if (data) {
+          const profiles = data.profiles as any;
+          setBooking({ 
+            driver: {
+              id: data.id,
+              name: profiles?.name || 'Demo Driver',
+              avatar: profiles?.name ? profiles.name.slice(0, 2).toUpperCase() : 'DR',
+              vehicle: data.vehicle_type,
+              plateNumber: data.plate_number,
+              rating: data.rating,
+              totalDeliveries: 0,
+              isAvailable: true,
+              phone: profiles?.phone || '',
+            } 
+          });
+          setIsMatching(false);
+        } else {
+          setErrorMsg("Could not find any drivers in the database at all. Please run the mock-drivers script.");
+          setShowRetry(true);
+        }
+      } catch (err) {
+        setErrorMsg("Demo Match failed. Please check your connection.");
+        setShowRetry(true);
+      }
+    };
+
     const timer = setTimeout(() => {
       matchDriver();
     }, 3500);
@@ -149,12 +187,18 @@ export default function MatchingPage() {
             </div>
 
             {showRetry && (
-              <div className="pt-8 fade-in">
+              <div className="pt-8 flex flex-col gap-4 fade-in">
                 <button 
                   onClick={() => window.location.reload()} 
                   className="px-6 py-3 bg-white border border-[#e5e7eb] rounded-xl font-bold text-sm hover:bg-gray-50 transition-all shadow-sm"
                 >
                   Still searching... Try again?
+                </button>
+                <button 
+                  onClick={forceMatch} 
+                  className="px-6 py-3 bg-[#00B14F] text-white rounded-xl font-bold text-sm hover:bg-[#009940] transition-all shadow-md"
+                >
+                  Force Match (Demo Mode)
                 </button>
               </div>
             )}
