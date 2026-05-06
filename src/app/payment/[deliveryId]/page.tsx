@@ -37,13 +37,21 @@ export default function PaymentByIdPage() {
     setIsProcessing(true);
     setError('');
 
+    // Timeout after 10 seconds
+    const timeout = setTimeout(() => {
+      setIsProcessing(false);
+      setError('Request timed out. Please check your connection and try again.');
+    }, 10000);
+
     try {
       await updateDelivery(booking.id, {
         paymentMethod: method,
       });
 
+      clearTimeout(timeout);
       setIsPaid(true);
     } catch (err: any) {
+      clearTimeout(timeout);
       console.error('Payment error:', err);
       setError(err.message || 'Payment failed. Please try again.');
     } finally {

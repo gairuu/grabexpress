@@ -290,11 +290,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchDeliveries]);
 
   const updateDelivery = useCallback(async (deliveryId: string, updates: Partial<Delivery>) => {
-    // Convert camelCase keys back to snake_case for Supabase
     const supabaseUpdates: any = {};
     if (updates.status) supabaseUpdates.status = updates.status;
     if (updates.paymentMethod) supabaseUpdates.payment_method = updates.paymentMethod;
-    // (add more fields if needed for future use)
+    if (updates.senderName) supabaseUpdates.sender_name = updates.senderName;
+    if (updates.senderPhone) supabaseUpdates.sender_phone = updates.senderPhone;
+    if (updates.recipientName) supabaseUpdates.recipient_name = updates.recipientName;
+    if (updates.recipientPhone) supabaseUpdates.recipient_phone = updates.recipientPhone;
+    if (updates.itemSize) supabaseUpdates.item_size = updates.itemSize;
+    if (updates.itemWeight) supabaseUpdates.item_weight = updates.itemWeight;
+    if (updates.itemType) supabaseUpdates.item_type = updates.itemType;
+    if (updates.vehicleType) supabaseUpdates.vehicle_type = updates.vehicleType;
 
     const { error } = await supabase
       .from('deliveries')
@@ -302,11 +308,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .eq('id', deliveryId);
 
     if (error) {
-      console.error('Error updating delivery:', error.message);
-      throw error;
+      console.error('Error updating delivery:', error.message, '| code:', error.code);
+      throw new Error(`Update failed: ${error.message}`);
     }
 
-    fetchDeliveries();
+    await fetchDeliveries();
   }, [fetchDeliveries]);
 
   const updateDeliveryStatus = useCallback(async (deliveryId: string, status: DeliveryStatus) => {
