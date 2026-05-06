@@ -262,9 +262,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
           schema: 'public',
           table: 'deliveries',
         },
-        () => {
-          console.log('Realtime update received for deliveries!');
-          fetchDeliveries();
+        (payload: any) => {
+          // Only trigger fetch if it's relevant to the current user
+          const newDel = payload.new;
+          const oldDel = payload.old;
+          
+          const isRelevant = 
+            user.role === 'admin' || 
+            (newDel && (newDel.customer_id === user.id || newDel.driver_id === user.id)) ||
+            (oldDel && (oldDel.customer_id === user.id || oldDel.driver_id === user.id));
+
+          if (isRelevant) {
+            console.log('Realtime update received for relevant delivery');
+            fetchDeliveries();
+          }
         }
       )
       .subscribe();
@@ -397,13 +408,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const findAvailableDriver = useCallback(async () => {
     // Use maybeSingle() so it returns null (not an error) when no rows found
+    // Safety timeout for the search
+    const fetchPromise = supabase
+      .from('drivers')
+      .select('*, profiles(name, avatar_url, phone)')
+      .eq('is_available', true)
+      .limit(1)
+      .maybeSingle();
+
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Driver search timed out')), 8000)
+    );
+
     try {
-      const { data, error } = await supabase
-        .from('drivers')
-        .select('*, profiles(name, avatar_url, phone)')
-        .eq('is_available', true)
-        .limit(1)
-        .maybeSingle();
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
       if (error) {
         console.error('findAvailableDriver DB error:', error.message, error.code);
