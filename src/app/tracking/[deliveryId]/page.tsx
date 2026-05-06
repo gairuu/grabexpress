@@ -21,20 +21,32 @@ export default function TrackingByIdPage() {
     if (loading) return;
     if (!params.deliveryId) { router.push('/book'); return; }
 
-    supabase
-      .from('deliveries')
-      .select('id')
-      .eq('id', params.deliveryId)
-      .maybeSingle()
-      .then(({ data }) => {
+    const verify = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('deliveries')
+          .select('*')
+          .eq('id', params.deliveryId)
+          .maybeSingle();
+
+        if (error) throw error;
+        
         if (!data) {
+          console.error("Delivery not found in DB:", params.deliveryId);
           router.push('/book');
         } else {
           setVerified(true);
-          fetchDeliveries();
+          await fetchDeliveries();
         }
-      });
-  }, [params.deliveryId, loading]);
+      } catch (err) {
+        console.error("Verification error:", err);
+        // Retry once after 2 seconds
+        setTimeout(verify, 2000);
+      }
+    };
+
+    verify();
+  }, [params.deliveryId, loading, fetchDeliveries, router]);
 
   useEffect(() => {
     if (!verified) return;

@@ -1,6 +1,6 @@
 'use client';
 import { Search, Package, CheckCircle2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import Navbar from '@/components/Navbar';
@@ -10,6 +10,7 @@ export default function MatchingPage() {
   const [isMatching, setIsMatching] = useState(true);
   const { booking, user, loading, bookAndMatch } = useApp();
   const router = useRouter();
+  const hasBooked = useRef(false);
 
   const [errorMsg, setErrorMsg] = useState('');
   const [showRetry, setShowRetry] = useState(false);
@@ -17,7 +18,8 @@ export default function MatchingPage() {
   const [createdDeliveryId, setCreatedDeliveryId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (loading || !user || !booking.pickup || createdDeliveryId) return;
+    if (loading || !user || !booking.pickup || hasBooked.current) return;
+    hasBooked.current = true;
 
     const runBookingFlow = async () => {
       try {

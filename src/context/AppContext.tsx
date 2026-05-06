@@ -254,7 +254,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fetchDeliveries();
 
     // Set up Realtime subscription for "instant" updates
-    const channel = supabase
+    const deliveryChannel = supabase
       .channel('deliveries-changes')
       .on(
         'postgres_changes',
@@ -274,7 +274,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
             (oldDel && (oldDel.customer_id === user.id || oldDel.driver_id === user.id));
 
           if (isRelevant) {
-            console.log('Realtime update received for relevant delivery');
+            fetchDeliveries();
+          }
+        }
+      )
+      .subscribe();
+
+    // Listen for driver availability changes
+    const driverChannel = supabase
+      .channel('drivers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'drivers',
+        },
+        (payload: any) => {
+          if (payload.new.id === user.id || user.role === 'customer') {
             fetchDeliveries();
           }
         }
@@ -282,7 +299,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(deliveryChannel);
+      supabase.removeChannel(driverChannel);
     };
   }, [user?.id, fetchDeliveries]);
 
@@ -452,21 +470,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await supabase.from('drivers').update({ is_available: false }).eq('id', driver.id);
 
     // 4. Update local booking state for the UI
+    const mappedDriver = {
+      id: driver.id,
+      name: driver.profiles?.name || 'Driver',
+      avatar: (driver.profiles?.name || 'DR').slice(0, 2).toUpperCase(),
+      vehicle: driver.vehicle_type,
+      plateNumber: driver.plate_number,
+      rating: driver.rating,
+      totalDeliveries: 0,
+      isAvailable: false,
+      phone: driver.profiles?.phone || '',
+    };
+
+    const newDelivery: Delivery = {
+      id: delivery.id,
+      customerId: deliveryData.customerId,
+      customerName: deliveryData.customerName,
+      driverId: driver.id,
+      driverName: driver.profiles?.name || 'Driver',
+      pickup: deliveryData.pickup,
+      dropoff: deliveryData.dropoff,
+      status: 'pending',
+      fee: deliveryData.fee,
+      paymentMethod: deliveryData.paymentMethod,
+      estimatedTime: '25-35 mins',
+      createdAt: new Date().toISOString(),
+      senderName: deliveryData.senderName,
+      senderPhone: deliveryData.senderPhone,
+      recipientName: deliveryData.recipientName,
+      recipientPhone: deliveryData.recipientPhone,
+      itemSize: deliveryData.itemSize,
+      itemWeight: deliveryData.itemWeight,
+      itemType: deliveryData.itemType,
+      vehicleType: deliveryData.vehicleType,
+    };
+
     setBookingState(prev => ({
       ...prev,
       id: delivery.id,
-      driver: {
-        id: driver.id,
-        name: driver.profiles?.name || 'Driver',
-        avatar: (driver.profiles?.name || 'DR').slice(0, 2).toUpperCase(),
-        vehicle: driver.vehicle_type,
-        plateNumber: driver.plate_number,
-        rating: driver.rating,
-        totalDeliveries: 0,
-        isAvailable: false,
-        phone: driver.profiles?.phone || '',
-      }
+      driver: mappedDriver
     }));
+
+    // Optimistically add to deliveries list so tracking page sees it immediately
+    setDeliveries(prev => [newDelivery, ...prev]);
 
     await fetchDeliveries();
     return delivery.id;
