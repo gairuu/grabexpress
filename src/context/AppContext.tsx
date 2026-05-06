@@ -403,6 +403,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           console.warn('Payment record insert failed:', paymentErr);
         }
       }
+    }
+
     await fetchDeliveries();
   }, [fetchDeliveries]);
 
