@@ -66,12 +66,55 @@ export default function TrackingByIdPage() {
   };
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !params.deliveryId) return;
+    
+    // Initial fetch
     fetchCurrentStatus();
 
-    // Poll every 3 seconds for status changes
-    const interval = setInterval(fetchCurrentStatus, 3000);
-    return () => clearInterval(interval);
+    // Subscribe to real-time changes for this specific delivery
+    const channel = supabase
+      .channel(`delivery-${params.deliveryId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'deliveries',
+          filter: `id=eq.${params.deliveryId}`,
+        },
+        (payload) => {
+          console.log('Real-time update received:', payload.new);
+          const data = payload.new;
+          const mapped: Delivery = {
+            id: data.id,
+            customer_id: data.customer_id,
+            customer_name: data.customer_name,
+            driver_id: data.driver_id || '',
+            driver_name: data.driver_name || '',
+            pickup_location: data.pickup_location,
+            dropoff_location: data.dropoff_location,
+            delivery_status: data.delivery_status as DeliveryStatus,
+            delivery_fee: data.delivery_fee,
+            payment_method: data.payment_method,
+            estimated_time: data.estimated_time,
+            booking_time: data.booking_time,
+            sender_name: data.sender_name,
+            sender_phone: data.sender_phone,
+            recipient_name: data.recipient_name,
+            recipient_phone: data.recipient_phone,
+            item_size: data.item_size,
+            item_weight: data.item_weight,
+            item_type: data.item_type,
+            vehicle_type: data.vehicle_type,
+          };
+          setDelivery(mapped);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [params.deliveryId, loading]);
 
   // Use state delivery or fallback to context booking
