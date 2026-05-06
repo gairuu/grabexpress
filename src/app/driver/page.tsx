@@ -13,6 +13,26 @@ export default function DriverDashboardPage() {
   const router = useRouter();
   const [actionError, setActionError] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [driverStatus, setDriverStatus] = useState<{is_available: boolean} | null>(null);
+  const [statusLoading, setStatusLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      if (!user) return;
+      const { data } = await supabase.from('drivers').select('is_available').eq('id', user.id).maybeSingle();
+      if (data) setDriverStatus(data);
+    };
+    fetchStatus();
+  }, [user]);
+
+  const toggleAvailability = async () => {
+    if (!user || !driverStatus) return;
+    setStatusLoading(true);
+    const newStatus = !driverStatus.is_available;
+    const { error } = await supabase.from('drivers').update({ is_available: newStatus }).eq('id', user.id);
+    if (!error) setDriverStatus({ is_available: newStatus });
+    setStatusLoading(false);
+  };
 
   const handleStatusUpdate = async (id: string, status: 'in_transit' | 'delivered' | 'cancelled') => {
     // If cancelling, ask for confirmation
@@ -74,17 +94,34 @@ export default function DriverDashboardPage() {
 
       <main className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
         <header className="mb-6 flex flex-col justify-between gap-3 md:flex-row md:items-center">
-          <div>
             <h1 className="text-2xl font-bold text-[#111827]">Driver Dashboard</h1>
-            <p className="text-sm text-[#6b7280]">Manage assigned deliveries and update progress in real time.</p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`h-2 w-2 rounded-full ${driverStatus?.is_available ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
+              <p className="text-sm text-[#6b7280]">
+                Status: <span className="font-semibold">{driverStatus?.is_available ? 'Online & Available' : 'Offline'}</span>
+              </p>
+            </div>
           </div>
-          <button 
-            onClick={() => fetchDeliveries()} 
-            className="flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-semibold text-[#374151] hover:bg-gray-50 shadow-sm"
-          >
-            <Clock size={16} />
-            Refresh
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={toggleAvailability} 
+              disabled={statusLoading}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold shadow-sm transition-all ${
+                driverStatus?.is_available 
+                  ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' 
+                  : 'bg-[#00B14F] text-white hover:bg-[#009940]'
+              }`}
+            >
+              {statusLoading ? '...' : (driverStatus?.is_available ? 'Go Offline' : 'Go Online')}
+            </button>
+            <button 
+              onClick={() => fetchDeliveries()} 
+              className="flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-semibold text-[#374151] hover:bg-gray-50 shadow-sm"
+            >
+              <Clock size={16} />
+              Refresh
+            </button>
+          </div>
         </header>
 
         {actionError && (
