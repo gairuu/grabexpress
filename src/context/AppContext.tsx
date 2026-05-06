@@ -199,10 +199,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setDeliveries([]);
-    setBookingState(defaultBooking);
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Supabase signOut error:", error);
+    } finally {
+      setUser(null);
+      setDeliveries([]);
+      setBookingState(defaultBooking);
+    }
   }, []);
 
   // ── Delivery functions ──

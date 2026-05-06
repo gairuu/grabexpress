@@ -10,11 +10,21 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     try {
+      // 1. Call the app's signOut (which calls Supabase)
       await signOut();
+      
+      // 2. Extra safety: Clear any leftover Supabase keys from localStorage
+      if (typeof window !== 'undefined') {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith('sb-')) localStorage.removeItem(key);
+        });
+        sessionStorage.clear();
+      }
     } catch (e) {
       console.error("Logout error:", e);
     } finally {
-      // Use hard redirect to ensure session is completely cleared
+      // 3. Final redirect
       window.location.href = '/';
     }
   };
