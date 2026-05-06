@@ -8,4 +8,11 @@ const rawKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
 const finalUrl = (rawUrl && rawUrl.startsWith('http')) ? rawUrl : 'https://placeholder.supabase.co';
 const finalKey = rawKey || 'placeholder';
 
-export const supabase = createClient(finalUrl, finalKey);
+export const supabase = createClient(finalUrl, finalKey, {
+  auth: {
+    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+});
