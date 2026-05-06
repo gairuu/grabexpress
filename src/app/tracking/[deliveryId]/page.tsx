@@ -7,30 +7,49 @@ import Navbar from '@/components/Navbar';
 import DriverCard from '@/components/DriverCard';
 import StatusTimeline from '@/components/StatusTimeline';
 import { DeliveryStatus } from '@/lib/types';
+import { supabase } from '@/lib/supabase';
 
 export default function TrackingByIdPage() {
   const { booking, user, loading, deliveries, fetchDeliveries } = useApp();
   const params = useParams<{ deliveryId: string }>();
   const router = useRouter();
+  const [verified, setVerified] = useState(false);
 
+  // Verify the delivery exists in the DB directly — avoids race condition
+  // where booking state hasn't updated yet right after navigation
   useEffect(() => {
     if (loading) return;
-    if (!booking.driver || !booking.id || booking.id !== params.deliveryId) {
-      router.push('/book');
-      return;
-    }
+    if (!params.deliveryId) { router.push('/book'); return; }
 
-    // Poll the database every 2 seconds to get real-time updates from the driver
+    supabase
+      .from('deliveries')
+      .select('id')
+      .eq('id', params.deliveryId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) {
+          router.push('/book');
+        } else {
+          setVerified(true);
+          fetchDeliveries();
+        }
+      });
+  }, [params.deliveryId, loading]);
+
+  useEffect(() => {
+    if (!verified) return;
+    // Poll every 2 seconds for real-time status updates
     const interval = setInterval(() => {
       fetchDeliveries();
     }, 2000);
-
     return () => clearInterval(interval);
-  }, [booking.driver, booking.id, params.deliveryId, router, loading, fetchDeliveries]);
+  }, [verified, fetchDeliveries]);
 
   // Find the real status from the database, fallback to booking state
   const currentDelivery = deliveries.find(d => d.id === params.deliveryId);
   const realStatus = currentDelivery?.status || booking.status || 'pending';
+  // Use driver from DB delivery or booking state
+  const driver = booking.driver || null;
 
   // ── Mock Location Simulation ──
   const [progress, setProgress] = useState(0);
@@ -49,11 +68,11 @@ export default function TrackingByIdPage() {
     }
   }, [realStatus]);
 
-  if (loading) {
+  if (loading || !verified) {
     return <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center"><div className="text-[#6b7280]">Loading...</div></div>;
   }
 
-  if (!user || !booking.driver) {
+  if (!user) {
     if (typeof window !== 'undefined') router.push('/auth');
     return null;
   }
