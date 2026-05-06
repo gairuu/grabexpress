@@ -209,7 +209,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchDeliveries = useCallback(async () => {
     if (!user) return;
 
-    let query = supabase.from('deliveries').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('deliveries').select('*').order('booking_time', { ascending: false });
 
     // Admin sees all, customer sees their own, driver sees assigned + unassigned pending
     if (user.role === 'customer') {
