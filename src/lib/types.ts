@@ -6,10 +6,10 @@ export interface Customer {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  contact_number: string;
   avatar: string;
   totalDeliveries: number;
-  joinedDate: string;
+  registration_date: string;
 }
 
 export interface Driver {
@@ -17,34 +17,44 @@ export interface Driver {
   name: string;
   avatar: string;
   vehicle: VehicleType;
-  plateNumber: string;
+  plate_number: string;
   rating: number;
   totalDeliveries: number;
-  isAvailable: boolean;
-  phone: string;
+  status: 'available' | 'busy';
+  contact_number: string;
+  license_number?: string;
+}
+
+export interface Vehicle {
+  id: string;
+  driver_id: string;
+  plate_number: string;
+  vehicle_type: VehicleType;
+  vehicle_model: string;
+  color: string;
 }
 
 export interface Delivery {
   id: string;
-  customerId: string;
-  customerName: string;
-  driverId: string;
-  driverName: string;
-  pickup: string;
-  dropoff: string;
-  status: DeliveryStatus;
-  fee: number;
-  paymentMethod: PaymentMethod;
-  createdAt: string;
-  estimatedTime: string;
-  senderName?: string;
-  senderPhone?: string;
-  recipientName?: string;
-  recipientPhone?: string;
-  itemSize?: 'S' | 'M' | 'L' | 'XL';
-  itemWeight?: number;
-  itemType?: string;
-  vehicleType?: VehicleType;
+  customer_id: string;
+  customer_name: string;
+  driver_id: string;
+  driver_name: string;
+  pickup_location: string;
+  dropoff_location: string;
+  delivery_status: DeliveryStatus;
+  delivery_fee: number;
+  payment_method: PaymentMethod;
+  booking_time: string;
+  estimated_time: string;
+  sender_name?: string;
+  sender_phone?: string;
+  recipient_name?: string;
+  recipient_phone?: string;
+  item_size?: 'S' | 'M' | 'L' | 'XL';
+  item_weight?: number;
+  item_type?: string;
+  vehicle_type?: VehicleType;
 }
 
 export interface BookingState {

@@ -14,29 +14,28 @@ export default function DriverDashboardPage() {
   const router = useRouter();
   const [actionError, setActionError] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [driverStatus, setDriverStatus] = useState<{is_available: boolean} | null>(null);
+  const [driverStatus, setDriverStatus] = useState<'available' | 'busy' | 'offline'>('offline');
   const [statusLoading, setStatusLoading] = useState(false);
 
   useEffect(() => {
     const fetchStatus = async () => {
       if (!user) return;
-      const { data } = await supabase.from('drivers').select('is_available').eq('id', user.id).maybeSingle();
-      if (data) setDriverStatus(data);
+      const { data } = await supabase.from('drivers').select('status').eq('id', user.id).maybeSingle();
+      if (data) setDriverStatus(data.status as any);
     };
     fetchStatus();
   }, [user]);
 
   const toggleAvailability = async () => {
-    if (!user || !driverStatus) return;
+    if (!user) return;
     setStatusLoading(true);
-    const newStatus = !driverStatus.is_available;
-    const { error } = await supabase.from('drivers').update({ is_available: newStatus }).eq('id', user.id);
-    if (!error) setDriverStatus({ is_available: newStatus });
+    const newStatus = driverStatus === 'available' ? 'busy' : 'available';
+    const { error } = await supabase.from('drivers').update({ status: newStatus }).eq('id', user.id);
+    if (!error) setDriverStatus(newStatus);
     setStatusLoading(false);
   };
 
   const handleStatusUpdate = async (id: string, status: 'in_transit' | 'delivered' | 'cancelled') => {
-    // If cancelling, ask for confirmation
     if (status === 'cancelled' && !confirm('Are you sure you want to cancel this delivery?')) {
       return;
     }
@@ -52,6 +51,11 @@ export default function DriverDashboardPage() {
     try {
       await updateDeliveryStatus(id, status);
       clearTimeout(safetyTimeout);
+      // Re-fetch driver status after finishing a job
+      if (status === 'delivered' || status === 'cancelled') {
+        const { data } = await supabase.from('drivers').select('status').eq('id', user.id).maybeSingle();
+        if (data) setDriverStatus(data.status as any);
+      }
     } catch (err: any) {
       clearTimeout(safetyTimeout);
       setActionError(err.message || 'Failed to update status. Please try again.');
@@ -67,10 +71,7 @@ export default function DriverDashboardPage() {
     } else if (user.role !== 'driver') {
       router.push('/dashboard');
     }
-
-    // We now have Realtime subscription in AppContext, so we don't need aggressive polling anymore.
-    // fetchDeliveries is called once on mount by AppContext.
-  }, [user, router, loading, fetchDeliveries]);
+  }, [user, router, loading]);
 
   if (loading) {
     return <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center"><div className="text-[#6b7280]">Loading...</div></div>;
@@ -81,13 +82,12 @@ export default function DriverDashboardPage() {
   }
 
   const stats = {
-    pending: deliveries.filter((job) => job.status === 'pending').length,
-    active: deliveries.filter((job) => job.status === 'in_transit').length,
-    completed: deliveries.filter((job) => job.status === 'delivered').length,
+    pending: deliveries.filter((job) => job.delivery_status === 'pending').length,
+    active: deliveries.filter((job) => job.delivery_status === 'in_transit').length,
+    completed: deliveries.filter((job) => job.delivery_status === 'delivered').length,
   };
 
-  // Only show active jobs in the main list
-  const myJobs = deliveries.filter(job => job.driverId === user?.id && (job.status === 'pending' || job.status === 'in_transit'));
+  const myJobs = deliveries.filter(job => job.driver_id === user?.id && (job.delivery_status === 'pending' || job.delivery_status === 'in_transit'));
 
   return (
     <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937]">
@@ -98,9 +98,9 @@ export default function DriverDashboardPage() {
           <div>
             <h1 className="text-2xl font-bold text-[#111827]">Driver Dashboard</h1>
             <div className="flex items-center gap-2 mt-1">
-              <span className={`h-2 w-2 rounded-full ${driverStatus?.is_available ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
+              <span className={`h-2 w-2 rounded-full ${driverStatus === 'available' ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`}></span>
               <p className="text-sm text-[#6b7280]">
-                Status: <span className="font-semibold">{driverStatus?.is_available ? 'Online & Available' : 'Offline'}</span>
+                Status: <span className="font-semibold uppercase">{driverStatus}</span>
               </p>
             </div>
           </div>
@@ -109,12 +109,12 @@ export default function DriverDashboardPage() {
               onClick={toggleAvailability} 
               disabled={statusLoading}
               className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold shadow-sm transition-all ${
-                driverStatus?.is_available 
+                driverStatus === 'available' 
                   ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' 
                   : 'bg-[#00B14F] text-white hover:bg-[#009940]'
               }`}
             >
-              {statusLoading ? '...' : (driverStatus?.is_available ? 'Go Offline' : 'Go Online')}
+              {statusLoading ? '...' : (driverStatus === 'available' ? 'Go Busy/Offline' : 'Go Online/Available')}
             </button>
             <button 
               onClick={() => fetchDeliveries()} 
@@ -145,7 +145,7 @@ export default function DriverDashboardPage() {
           <div className="divide-y divide-[#e5e7eb]">
             {myJobs.length === 0 ? (
               <div className="px-5 py-10 text-center text-sm text-[#9ca3af]">
-                No assigned deliveries yet. Deliveries will appear here when customers assign you as their driver.
+                No assigned deliveries yet.
               </div>
             ) : (
               myJobs.map((job) => (
@@ -154,18 +154,18 @@ export default function DriverDashboardPage() {
                     <div>
                       <div className="mb-1 flex items-center gap-3">
                         <span className="font-mono text-xs text-[#9ca3af]">#{job.id.slice(0, 8).toUpperCase()}</span>
-                        <StatusBadge status={job.status} size="sm" />
+                        <StatusBadge status={job.delivery_status} size="sm" />
                       </div>
                       <div className="text-sm font-medium text-[#111827]">
-                        {job.pickup} &rarr; {job.dropoff}
+                        {job.pickup_location} &rarr; {job.dropoff_location}
                       </div>
                       <div className="mt-1 text-xs text-[#6b7280]">
-                        Customer: {job.customerName} · {formatDate(job.createdAt)} · {formatCurrency(job.fee)}
+                        Customer: {job.customer_name} · {formatDate(job.booking_time)} · {formatCurrency(job.delivery_fee)}
                       </div>
                     </div>
 
                     <div className="flex gap-2">
-                      {job.status === 'pending' && (
+                      {job.delivery_status === 'pending' && (
                         <>
                           <button
                             className="rounded-md bg-[#00B14F] px-3 py-2 text-xs font-semibold text-white hover:bg-[#009940] disabled:opacity-60"
@@ -183,7 +183,7 @@ export default function DriverDashboardPage() {
                           </button>
                         </>
                       )}
-                      {job.status === 'in_transit' && (
+                      {job.delivery_status === 'in_transit' && (
                         <>
                           <button
                             className="rounded-md bg-[var(--grab-green)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--grab-green-dark)] disabled:opacity-60"

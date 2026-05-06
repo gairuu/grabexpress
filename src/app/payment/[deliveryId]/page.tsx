@@ -9,27 +9,66 @@ import PaymentMethodCard from '@/components/PaymentMethodCard';
 import SuccessModal from '@/components/SuccessModal';
 import { PaymentMethod } from '@/lib/types';
 
+import { Delivery } from '@/lib/types';
+import { supabase } from '@/lib/supabase';
+
 export default function PaymentByIdPage() {
   const router = useRouter();
-  const { booking, updateDelivery, user, loading, resetBooking } = useApp();
+  const { user, loading, resetBooking } = useApp();
   const params = useParams<{ deliveryId: string }>();
+  const [delivery, setDelivery] = useState<Delivery | null>(null);
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [isPaid, setIsPaid] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
     if (loading) return;
-    if (!user || !booking.driver || booking.id !== params.deliveryId) {
+    if (!user) {
       router.push('/auth');
+      return;
     }
-  }, [user, booking, params.deliveryId, router, loading]);
 
-  if (loading) {
+    const fetchDelivery = async () => {
+      setFetching(true);
+      const { data, error: fetchError } = await supabase
+        .from('deliveries')
+        .select('*')
+        .eq('id', params.deliveryId)
+        .single();
+
+      if (fetchError || !data) {
+        console.error("Payment: Delivery not found", fetchError);
+        router.push('/dashboard');
+        return;
+      }
+
+      setDelivery({
+        id: data.id,
+        customer_id: data.customer_id,
+        customer_name: data.customer_name,
+        driver_id: data.driver_id,
+        driver_name: data.driver_name,
+        pickup_location: data.pickup_location,
+        dropoff_location: data.dropoff_location,
+        delivery_status: data.delivery_status,
+        delivery_fee: data.delivery_fee,
+        payment_method: data.payment_method,
+        booking_time: data.booking_time,
+        estimated_time: data.estimated_time,
+      });
+      setFetching(false);
+    };
+
+    fetchDelivery();
+  }, [user, params.deliveryId, router, loading]);
+
+  if (loading || fetching) {
     return <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center"><div className="text-[#6b7280]">Loading...</div></div>;
   }
 
-  if (!user || !booking.driver || booking.id !== params.deliveryId) {
+  if (!user || !delivery) {
     return null;
   }
 
@@ -37,21 +76,16 @@ export default function PaymentByIdPage() {
     setIsProcessing(true);
     setError('');
 
-    // Timeout after 10 seconds
-    const timeout = setTimeout(() => {
-      setIsProcessing(false);
-      setError('Request timed out. Please check your connection and try again.');
-    }, 10000);
-
     try {
-      await updateDelivery(booking.id, {
-        paymentMethod: method,
-      });
+      const { error: updateError } = await supabase
+        .from('deliveries')
+        .update({ payment_method: method })
+        .eq('id', delivery.id);
 
-      clearTimeout(timeout);
+      if (updateError) throw updateError;
+
       setIsPaid(true);
     } catch (err: any) {
-      clearTimeout(timeout);
       console.error('Payment error:', err);
       setError(err.message || 'Payment failed. Please try again.');
     } finally {
@@ -98,7 +132,7 @@ export default function PaymentByIdPage() {
               <div className="space-y-4 border-b border-[#e5e7eb] pb-6 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-[#9ca3af]">Delivery Fee</span>
-                  <span className="text-[#111827]">{formatCurrency(booking.fee)}</span>
+                  <span className="text-[#111827]">{formatCurrency(delivery.delivery_fee)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-[#9ca3af]">Driver Tip</span>
@@ -108,7 +142,7 @@ export default function PaymentByIdPage() {
 
               <div className="flex justify-between items-end mb-8">
                 <span className="font-medium text-[#6b7280]">Total Amount</span>
-                <span className="text-3xl font-black text-[var(--grab-green)]">{formatCurrency(booking.fee)}</span>
+                <span className="text-3xl font-black text-[var(--grab-green)]">{formatCurrency(delivery.delivery_fee)}</span>
               </div>
 
               <button onClick={handlePay} className="btn-primary py-4 text-lg font-bold grab-glow" disabled={isProcessing}>
@@ -121,9 +155,12 @@ export default function PaymentByIdPage() {
 
       {isPaid && (
         <SuccessModal
-          amount={formatCurrency(booking.fee)}
+          amount={formatCurrency(delivery.delivery_fee)}
           method={methodLabels[method]}
-          onClose={() => resetBooking()}
+          onClose={() => {
+            resetBooking();
+            router.push('/dashboard');
+          }}
         />
       )}
     </div>

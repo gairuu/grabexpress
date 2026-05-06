@@ -47,7 +47,7 @@ export default function DriverCard({ driver, compact = false }: Props) {
             <VehicleIcon size={14} /> {driver.vehicle}
           </span>
           <span style={{ fontSize: 12, color: '#6b7280', fontFamily: 'monospace', background: '#f3f4f6', padding: '2px 8px', borderRadius: 6 }}>
-            {driver.plateNumber}
+            {driver.plate_number}
           </span>
           {!compact && (
             <span style={{ fontSize: 12, color: '#9ca3af', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -57,16 +57,16 @@ export default function DriverCard({ driver, compact = false }: Props) {
         </div>
         {!compact && (
           <div style={{ marginTop: 8, fontSize: 13, color: 'var(--grab-green)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Phone size={14} /> {driver.phone}
+            <Phone size={14} /> {driver.contact_number}
           </div>
         )}
       </div>
 
       {!compact && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: driver.isAvailable ? 'var(--grab-green)' : '#EF4444', boxShadow: driver.isAvailable ? '0 0 8px rgba(0,177,79,0.7)' : 'none' }} />
-          <span style={{ fontSize: 12, color: driver.isAvailable ? 'var(--grab-green)' : '#F87171', fontWeight: 600 }}>
-            {driver.isAvailable ? 'Available' : 'Busy'}
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: driver.status === 'available' ? 'var(--grab-green)' : '#EF4444', boxShadow: driver.status === 'available' ? '0 0 8px rgba(0,177,79,0.7)' : 'none' }} />
+          <span style={{ fontSize: 12, color: driver.status === 'available' ? 'var(--grab-green)' : '#F87171', fontWeight: 600 }}>
+            {driver.status === 'available' ? 'Available' : 'Busy'}
           </span>
         </div>
       )}

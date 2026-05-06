@@ -33,25 +33,25 @@ export default function TrackingByIdPage() {
         // Map DB row to our Delivery type
         const mapped: Delivery = {
           id: data.id,
-          customerId: data.customer_id,
-          customerName: data.customer_name,
-          driverId: data.driver_id || '',
-          driverName: data.driver_name || '',
-          pickup: data.pickup_location,
-          dropoff: data.dropoff_location,
-          status: data.status as DeliveryStatus,
-          fee: data.fee,
-          paymentMethod: data.payment_method,
-          estimatedTime: data.estimated_time,
-          createdAt: data.created_at,
-          senderName: data.sender_name,
-          senderPhone: data.sender_phone,
-          recipientName: data.recipient_name,
-          recipientPhone: data.recipient_phone,
-          itemSize: data.item_size,
-          itemWeight: data.item_weight,
-          itemType: data.item_type,
-          vehicleType: data.vehicle_type,
+          customer_id: data.customer_id,
+          customer_name: data.customer_name,
+          driver_id: data.driver_id || '',
+          driver_name: data.driver_name || '',
+          pickup_location: data.pickup_location,
+          dropoff_location: data.dropoff_location,
+          delivery_status: data.delivery_status as DeliveryStatus,
+          delivery_fee: data.delivery_fee,
+          payment_method: data.payment_method,
+          estimated_time: data.estimated_time,
+          booking_time: data.booking_time,
+          sender_name: data.sender_name,
+          sender_phone: data.sender_phone,
+          recipient_name: data.recipient_name,
+          recipient_phone: data.recipient_phone,
+          item_size: data.item_size,
+          item_weight: data.item_weight,
+          item_type: data.item_type,
+          vehicle_type: data.vehicle_type,
         };
         setDelivery(mapped);
       } else {
@@ -75,16 +75,16 @@ export default function TrackingByIdPage() {
   }, [params.deliveryId, loading]);
 
   // Use state delivery or fallback to context booking
-  const realStatus = delivery?.status || booking.status || 'pending';
-  const displayDriver = delivery?.driverId ? {
-    id: delivery.driverId,
-    name: delivery.driverName,
-    avatar: (delivery.driverName || 'DR').slice(0, 2).toUpperCase(),
-    vehicle: delivery.vehicleType || 'Motorcycle',
+  const realStatus = delivery?.delivery_status || booking.status || 'pending';
+  const displayDriver = delivery?.driver_id ? {
+    id: delivery.driver_id,
+    name: delivery.driver_name,
+    avatar: (delivery.driver_name || 'DR').slice(0, 2).toUpperCase(),
+    vehicle: delivery.vehicle_type || 'Motorcycle',
     rating: 5.0,
     totalDeliveries: 0,
-    isAvailable: false,
-    phone: '',
+    status: 'busy',
+    contact_number: '',
   } : booking.driver;
 
   const [progress, setProgress] = useState(0);
@@ -181,14 +181,14 @@ export default function TrackingByIdPage() {
                   <div className="w-2 h-2 rounded-full bg-[#00B14F] mt-1.5 flex-shrink-0"></div>
                   <div>
                     <div className="text-[10px] text-[#9ca3af] uppercase font-bold">Pickup</div>
-                    <div className="text-sm text-[#111827] font-medium">{delivery?.pickup || booking.pickup}</div>
+                    <div className="text-sm text-[#111827] font-medium">{delivery?.pickup_location || booking.pickup}</div>
                   </div>
                 </div>
                 <div className="flex gap-4">
                   <div className="w-2 h-2 rounded bg-red-400 mt-1.5 flex-shrink-0"></div>
                   <div>
                     <div className="text-[10px] text-[#9ca3af] uppercase font-bold">Drop-off</div>
-                    <div className="text-sm text-[#111827] font-medium">{delivery?.dropoff || booking.dropoff}</div>
+                    <div className="text-sm text-[#111827] font-medium">{delivery?.dropoff_location || booking.dropoff}</div>
                   </div>
                 </div>
               </div>

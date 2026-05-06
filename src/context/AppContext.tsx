@@ -67,6 +67,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       name: data.name,
       email: data.email,
       avatar: data.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
+      contact_number: data.contact_number,
       role: data.role,
     };
 
@@ -143,7 +144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           vehicle_type: 'Motorcycle',
           plate_number: 'TBD',
           rating: 5.0,
-          is_available: true,
+          status: 'available',
         });
         
         if (driverError) {
@@ -223,25 +224,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!error && data) {
       const mapped: Delivery[] = data.map((row) => ({
         id: row.id,
-        customerId: row.customer_id,
-        customerName: row.customer_name || 'Unknown',
-        driverId: row.driver_id || '',
-        driverName: row.driver_name || 'Unassigned',
-        pickup: row.pickup_location,
-        dropoff: row.dropoff_location,
-        status: row.status,
-        fee: Number(row.fee),
-        paymentMethod: row.payment_method,
-        createdAt: row.created_at,
-        estimatedTime: row.estimated_time || '',
-        senderName: row.sender_name,
-        senderPhone: row.sender_phone,
-        recipientName: row.recipient_name,
-        recipientPhone: row.recipient_phone,
-        itemSize: row.item_size,
-        itemWeight: row.item_weight,
-        itemType: row.item_type,
-        vehicleType: row.vehicle_type,
+        customer_id: row.customer_id,
+        customer_name: row.customer_name || 'Unknown',
+        driver_id: row.driver_id || '',
+        driver_name: row.driver_name || 'Unassigned',
+        pickup_location: row.pickup_location,
+        dropoff_location: row.dropoff_location,
+        delivery_status: row.delivery_status,
+        delivery_fee: Number(row.delivery_fee),
+        payment_method: row.payment_method,
+        booking_time: row.booking_time,
+        estimated_time: row.estimated_time || '',
+        sender_name: row.sender_name,
+        sender_phone: row.sender_phone,
+        recipient_name: row.recipient_name,
+        recipient_phone: row.recipient_phone,
+        item_size: row.item_size,
+        item_weight: row.item_weight,
+        item_type: row.item_type,
+        vehicle_type: row.vehicle_type,
       }));
       setDeliveries(mapped);
     }
@@ -306,24 +307,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addDelivery = useCallback(async (d: Omit<Delivery, 'id'>) => {
     const { data, error } = await supabase.from('deliveries').insert({
-      customer_id: d.customerId,
-      customer_name: d.customerName,
-      driver_id: d.driverId || null,
-      driver_name: d.driverName,
-      pickup_location: d.pickup,
-      dropoff_location: d.dropoff,
-      status: d.status,
-      fee: d.fee,
-      payment_method: d.paymentMethod,
-      estimated_time: d.estimatedTime,
-      sender_name: d.senderName,
-      sender_phone: d.senderPhone,
-      recipient_name: d.recipientName,
-      recipient_phone: d.recipientPhone,
-      item_size: d.itemSize,
-      item_weight: d.itemWeight,
-      item_type: d.itemType,
-      vehicle_type: d.vehicleType,
+      customer_id: d.customer_id,
+      customer_name: d.customer_name,
+      driver_id: d.driver_id || null,
+      driver_name: d.driver_name,
+      pickup_location: d.pickup_location,
+      dropoff_location: d.dropoff_location,
+      delivery_status: d.delivery_status,
+      delivery_fee: d.delivery_fee,
+      payment_method: d.payment_method,
+      estimated_time: d.estimated_time,
+      sender_name: d.sender_name,
+      sender_phone: d.sender_phone,
+      recipient_name: d.recipient_name,
+      recipient_phone: d.recipient_phone,
+      item_size: d.item_size,
+      item_weight: d.item_weight,
+      item_type: d.item_type,
+      vehicle_type: d.vehicle_type,
     }).select('id').single();
 
     if (error) {
@@ -393,7 +394,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // 2. Perform the update
     const { error: updateError } = await supabase
       .from('deliveries')
-      .update({ status })
+      .update({ delivery_status: status })
       .eq('id', deliveryId);
 
     if (updateError) {
@@ -407,14 +408,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const drId = currentDel.driver_id;
       if (drId) {
         console.log('Freeing up driver:', drId);
-        await supabase.from('drivers').update({ is_available: true }).eq('id', drId);
+        await supabase.from('drivers').update({ status: 'available' }).eq('id', drId);
       }
       
       if (status === 'delivered') {
         try {
           await supabase.from('payments').insert({
             delivery_id: deliveryId,
-            amount: currentDel.fee,
+            amount: currentDel.delivery_fee,
             payment_method: currentDel.payment_method,
             payment_status: 'completed'
           });
@@ -431,8 +432,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // 1. Find available driver
     const { data: driver, error: driverError } = await supabase
       .from('drivers')
-      .select('*, profiles(name)')
-      .eq('is_available', true)
+      .select('*, profiles(name, contact_number)')
+      .eq('status', 'available')
       .limit(1)
       .maybeSingle();
 
@@ -443,23 +444,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { data: delivery, error: deliveryError } = await supabase
       .from('deliveries')
       .insert({
-        customer_id: deliveryData.customerId,
-        customer_name: deliveryData.customerName,
+        customer_id: deliveryData.customer_id,
+        customer_name: deliveryData.customer_name,
         driver_id: driver.id,
         driver_name: driver.profiles?.name || 'Driver',
-        pickup_location: deliveryData.pickup,
-        dropoff_location: deliveryData.dropoff,
-        status: 'pending',
-        fee: deliveryData.fee,
-        payment_method: deliveryData.paymentMethod,
-        item_size: deliveryData.itemSize,
-        item_weight: deliveryData.itemWeight,
-        item_type: deliveryData.itemType,
-        vehicle_type: deliveryData.vehicleType,
-        sender_name: deliveryData.senderName,
-        sender_phone: deliveryData.senderPhone,
-        recipient_name: deliveryData.recipientName,
-        recipient_phone: deliveryData.recipientPhone
+        pickup_location: deliveryData.pickup_location,
+        dropoff_location: deliveryData.dropoff_location,
+        delivery_status: 'pending',
+        delivery_fee: deliveryData.delivery_fee,
+        payment_method: deliveryData.payment_method,
+        item_size: deliveryData.item_size,
+        item_weight: deliveryData.item_weight,
+        item_type: deliveryData.item_type,
+        vehicle_type: deliveryData.vehicle_type,
+        sender_name: deliveryData.sender_name,
+        sender_phone: deliveryData.sender_phone,
+        recipient_name: deliveryData.recipient_name,
+        recipient_phone: deliveryData.recipient_phone
       })
       .select()
       .single();
@@ -467,7 +468,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (deliveryError) throw new Error(`Booking failed: ${deliveryError.message}`);
 
     // 3. Mark driver busy
-    await supabase.from('drivers').update({ is_available: false }).eq('id', driver.id);
+    await supabase.from('drivers').update({ status: 'busy' }).eq('id', driver.id);
 
     // 4. Update local booking state for the UI
     const mappedDriver = {
@@ -475,34 +476,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       name: driver.profiles?.name || 'Driver',
       avatar: (driver.profiles?.name || 'DR').slice(0, 2).toUpperCase(),
       vehicle: driver.vehicle_type,
-      plateNumber: driver.plate_number,
+      plate_number: driver.plate_number,
       rating: driver.rating,
       totalDeliveries: 0,
-      isAvailable: false,
-      phone: driver.profiles?.phone || '',
+      status: 'busy',
+      contact_number: driver.profiles?.contact_number || '',
     };
 
     const newDelivery: Delivery = {
       id: delivery.id,
-      customerId: deliveryData.customerId,
-      customerName: deliveryData.customerName,
-      driverId: driver.id,
-      driverName: driver.profiles?.name || 'Driver',
-      pickup: deliveryData.pickup,
-      dropoff: deliveryData.dropoff,
-      status: 'pending',
-      fee: deliveryData.fee,
-      paymentMethod: deliveryData.paymentMethod,
-      estimatedTime: '25-35 mins',
-      createdAt: new Date().toISOString(),
-      senderName: deliveryData.senderName,
-      senderPhone: deliveryData.senderPhone,
-      recipientName: deliveryData.recipientName,
-      recipientPhone: deliveryData.recipientPhone,
-      itemSize: deliveryData.itemSize,
-      itemWeight: deliveryData.itemWeight,
-      itemType: deliveryData.itemType,
-      vehicleType: deliveryData.vehicleType,
+      customer_id: deliveryData.customer_id,
+      customer_name: deliveryData.customer_name,
+      driver_id: driver.id,
+      driver_name: driver.profiles?.name || 'Driver',
+      pickup_location: deliveryData.pickup_location,
+      dropoff_location: deliveryData.dropoff_location,
+      delivery_status: 'pending',
+      delivery_fee: deliveryData.delivery_fee,
+      payment_method: deliveryData.payment_method,
+      estimated_time: '25-35 mins',
+      booking_time: new Date().toISOString(),
+      sender_name: deliveryData.sender_name,
+      sender_phone: deliveryData.sender_phone,
+      recipient_name: deliveryData.recipient_name,
+      recipient_phone: deliveryData.recipient_phone,
+      item_size: deliveryData.item_size,
+      item_weight: deliveryData.item_weight,
+      item_type: deliveryData.item_type,
+      vehicle_type: deliveryData.vehicle_type,
     };
 
     setBookingState(prev => ({
@@ -522,8 +523,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Safety timeout for the search
     const fetchPromise = supabase
       .from('drivers')
-      .select('*, profiles(name, avatar_url, phone)')
-      .eq('is_available', true)
+      .select('*, profiles(name, avatar_url, contact_number)')
+      .eq('status', 'available')
       .limit(1)
       .maybeSingle();
 
@@ -553,11 +554,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         name: profiles?.name || 'Driver',
         avatar: profiles?.name ? profiles.name.slice(0, 2).toUpperCase() : 'DR',
         vehicle: data.vehicle_type,
-        plateNumber: data.plate_number,
+        plate_number: data.plate_number,
         rating: data.rating,
         totalDeliveries: 0,
-        isAvailable: data.is_available,
-        phone: profiles?.phone || '',
+        status: data.status,
+        contact_number: profiles?.contact_number || '',
       };
     } catch (err) {
       console.error('findAvailableDriver unexpected error:', err);
