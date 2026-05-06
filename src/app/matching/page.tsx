@@ -65,6 +65,7 @@ export default function MatchingPage() {
           name: assignedDelivery.driverName,
           avatar: assignedDelivery.driverName.slice(0, 2).toUpperCase(),
           vehicle: assignedDelivery.vehicleType || 'Motorcycle',
+          plateNumber: assignedDelivery.plateNumber || '',
           rating: 5.0,
           totalDeliveries: 0,
           isAvailable: false,
