@@ -14,7 +14,12 @@ export default function DriverDashboardPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  const handleStatusUpdate = async (id: string, status: 'in_transit' | 'delivered') => {
+  const handleStatusUpdate = async (id: string, status: 'in_transit' | 'delivered' | 'cancelled') => {
+    // If cancelling, ask for confirmation
+    if (status === 'cancelled' && !confirm('Are you sure you want to cancel this delivery?')) {
+      return;
+    }
+    
     setLoadingId(id);
     setActionError(null);
     try {
@@ -50,13 +55,14 @@ export default function DriverDashboardPage() {
     return null;
   }
 
-  const myJobs = deliveries;
-
   const stats = {
-    pending: myJobs.filter((job) => job.status === 'pending').length,
-    active: myJobs.filter((job) => job.status === 'in_transit').length,
-    completed: myJobs.filter((job) => job.status === 'delivered').length,
+    pending: deliveries.filter((job) => job.status === 'pending').length,
+    active: deliveries.filter((job) => job.status === 'in_transit').length,
+    completed: deliveries.filter((job) => job.status === 'delivered').length,
   };
+
+  // Only show active jobs in the main list
+  const myJobs = deliveries.filter(job => job.status === 'pending' || job.status === 'in_transit');
 
   return (
     <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937]">
@@ -110,22 +116,40 @@ export default function DriverDashboardPage() {
 
                     <div className="flex gap-2">
                       {job.status === 'pending' && (
-                        <button
-                          className="rounded-md bg-[#00B14F] px-3 py-2 text-xs font-semibold text-white hover:bg-[#009940] disabled:opacity-60"
-                          disabled={loadingId === job.id}
-                          onClick={() => handleStatusUpdate(job.id, 'in_transit')}
-                        >
-                          {loadingId === job.id ? 'Updating...' : 'Start Delivery'}
-                        </button>
+                        <>
+                          <button
+                            className="rounded-md bg-[#00B14F] px-3 py-2 text-xs font-semibold text-white hover:bg-[#009940] disabled:opacity-60"
+                            disabled={loadingId === job.id}
+                            onClick={() => handleStatusUpdate(job.id, 'in_transit')}
+                          >
+                            {loadingId === job.id ? 'Updating...' : 'Start Delivery'}
+                          </button>
+                          <button
+                            className="rounded-md border border-[#e5e7eb] px-3 py-2 text-xs font-semibold text-[#6b7280] hover:bg-gray-50 disabled:opacity-60"
+                            disabled={loadingId === job.id}
+                            onClick={() => handleStatusUpdate(job.id, 'cancelled')}
+                          >
+                            Cancel
+                          </button>
+                        </>
                       )}
                       {job.status === 'in_transit' && (
-                        <button
-                          className="rounded-md bg-[var(--grab-green)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--grab-green-dark)] disabled:opacity-60"
-                          disabled={loadingId === job.id}
-                          onClick={() => handleStatusUpdate(job.id, 'delivered')}
-                        >
-                          {loadingId === job.id ? 'Updating...' : 'Mark Delivered'}
-                        </button>
+                        <>
+                          <button
+                            className="rounded-md bg-[var(--grab-green)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--grab-green-dark)] disabled:opacity-60"
+                            disabled={loadingId === job.id}
+                            onClick={() => handleStatusUpdate(job.id, 'delivered')}
+                          >
+                            {loadingId === job.id ? 'Updating...' : 'Mark Delivered'}
+                          </button>
+                          <button
+                            className="rounded-md border border-[#e5e7eb] px-3 py-2 text-xs font-semibold text-[#6b7280] hover:bg-gray-50 disabled:opacity-60"
+                            disabled={loadingId === job.id}
+                            onClick={() => handleStatusUpdate(job.id, 'cancelled')}
+                          >
+                            Cancel
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
