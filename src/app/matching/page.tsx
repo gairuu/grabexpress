@@ -8,24 +8,25 @@ import DriverCard from '@/components/DriverCard';
 
 export default function MatchingPage() {
   const [isMatching, setIsMatching] = useState(true);
-  const { booking, setBooking, user, loading, deliveries, addDelivery, findAvailableDriver } = useApp();
+  const { booking, user, loading, bookAndMatch } = useApp();
   const router = useRouter();
 
   const [errorMsg, setErrorMsg] = useState('');
   const [showRetry, setShowRetry] = useState(false);
-  const [isStarting, setIsStarting] = useState(false);
-  const [createdDeliveryId, setCreatedDeliveryId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (loading || !user || !booking.pickup || createdDeliveryId) return;
+    if (loading || !user || !booking.pickup) return;
 
-    const createInitialDelivery = async () => {
+    const runBookingFlow = async () => {
       try {
-        const id = await addDelivery({
+        // Simulated search delay for premium feel
+        await new Promise(resolve => setTimeout(resolve, 3500));
+
+        const deliveryId = await bookAndMatch({
           customerId: user.id,
           customerName: user.name || 'Customer',
-          driverId: '', // Unassigned
-          driverName: 'Searching...',
+          driverId: '', 
+          driverName: '',
           pickup: booking.pickup,
           dropoff: booking.dropoff,
           status: 'pending',
@@ -42,44 +43,18 @@ export default function MatchingPage() {
           itemType: booking.itemType,
           vehicleType: booking.vehicleType,
         });
-        setCreatedDeliveryId(id);
-      } catch (err) {
-        console.error("Error creating initial delivery:", err);
-        setErrorMsg("Failed to start search. Please try again.");
+
+        router.push(`/tracking/${deliveryId}`);
+      } catch (err: any) {
+        console.error("Booking flow failed:", err);
+        setErrorMsg(err.message || "No drivers found. Please ensure a driver is online and try again.");
+        setShowRetry(true);
+        setIsMatching(false);
       }
     };
 
-    createInitialDelivery();
-  }, [user, booking, loading, addDelivery, createdDeliveryId]);
-
-  // Listen for driver assignment
-  useEffect(() => {
-    if (!createdDeliveryId) return;
-
-    const assignedDelivery = (deliveries as any[]).find(d => d.id === createdDeliveryId && d.driverId);
-    if (assignedDelivery) {
-      setBooking({ 
-        id: createdDeliveryId,
-        driver: {
-          id: assignedDelivery.driverId,
-          name: assignedDelivery.driverName,
-          avatar: assignedDelivery.driverName.slice(0, 2).toUpperCase(),
-          vehicle: assignedDelivery.vehicleType || 'Motorcycle',
-          plateNumber: assignedDelivery.plateNumber || '',
-          rating: 5.0,
-          totalDeliveries: 0,
-          isAvailable: false,
-          phone: '',
-        }
-      });
-      setIsMatching(false);
-    }
-  }, [deliveries, createdDeliveryId, setBooking]);
-
-  const handleStart = () => {
-    if (!createdDeliveryId) return;
-    router.push(`/tracking/${createdDeliveryId}`);
-  };
+    runBookingFlow();
+  }, [user, booking, loading, bookAndMatch, router]);
 
   if (loading) {
     return <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center"><div className="text-[#6b7280]">Loading...</div></div>;

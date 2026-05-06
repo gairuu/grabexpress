@@ -17,7 +17,7 @@ interface AppContextType {
   addDelivery: (d: Omit<Delivery, 'id'>) => Promise<string>;
   updateDelivery: (deliveryId: string, updates: Partial<Delivery>) => Promise<void>;
   updateDeliveryStatus: (deliveryId: string, status: DeliveryStatus) => Promise<void>;
-  acceptDelivery: (deliveryId: string, driver: { id: string; name: string }) => Promise<void>;
+  bookAndMatch: (d: Omit<Delivery, 'id'>) => Promise<string>;
   findAvailableDriver: () => Promise<any>;
   setBooking: (b: Partial<BookingState>) => void;
   resetBooking: () => void;
@@ -214,12 +214,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (user.role === 'customer') {
       query = query.eq('customer_id', user.id);
     } else if (user.role === 'driver') {
-      // Fetch all: assigned to me OR unassigned pending. Filter in UI.
-      query = supabase
-        .from('deliveries')
-        .select('*')
-        .or(`driver_id.eq.${user.id},driver_id.is.null`)
-        .order('created_at', { ascending: false });
+      query = query.eq('driver_id', user.id);
     }
     // admin: no filter (RLS handles it)
 
@@ -414,25 +409,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await fetchDeliveries();
   }, [fetchDeliveries]);
 
-  const acceptDelivery = useCallback(async (deliveryId: string, driver: { id: string, name: string }) => {
-    const { error } = await supabase
+  const bookAndMatch = useCallback(async (deliveryData: Omit<Delivery, 'id'>) => {
+    // 1. Find available driver
+    const { data: driver, error: driverError } = await supabase
+      .from('drivers')
+      .select('*, profiles(name)')
+      .eq('is_available', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (driverError) throw new Error(`Driver search failed: ${driverError.message}`);
+    if (!driver) throw new Error("No available drivers found. Please try again in a moment.");
+
+    // 2. Create delivery with that driver
+    const { data: delivery, error: deliveryError } = await supabase
       .from('deliveries')
-      .update({ 
+      .insert({
+        customer_id: deliveryData.customerId,
+        customer_name: deliveryData.customerName,
         driver_id: driver.id,
-        driver_name: driver.name,
-        status: 'pending' 
+        driver_name: driver.profiles?.name || 'Driver',
+        pickup_location: deliveryData.pickup,
+        dropoff_location: deliveryData.dropoff,
+        status: 'pending',
+        fee: deliveryData.fee,
+        payment_method: deliveryData.paymentMethod,
+        item_size: deliveryData.itemSize,
+        item_weight: deliveryData.itemWeight,
+        item_type: deliveryData.itemType,
+        vehicle_type: deliveryData.vehicleType,
+        sender_name: deliveryData.senderName,
+        sender_phone: deliveryData.senderPhone,
+        recipient_name: deliveryData.recipientName,
+        recipient_phone: deliveryData.recipientPhone
       })
-      .eq('id', deliveryId);
+      .select()
+      .single();
 
-    if (error) {
-      console.error('Error accepting delivery:', error.message);
-      throw new Error(`Failed to accept: ${error.message}`);
-    }
+    if (deliveryError) throw new Error(`Booking failed: ${deliveryError.message}`);
 
-    // Mark driver as busy
+    // 3. Mark driver busy
     await supabase.from('drivers').update({ is_available: false }).eq('id', driver.id);
 
     await fetchDeliveries();
+    return delivery.id;
   }, [fetchDeliveries]);
 
   const findAvailableDriver = useCallback(async () => {
@@ -506,7 +526,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addDelivery,
         updateDelivery,
         updateDeliveryStatus,
-        acceptDelivery,
+        bookAndMatch,
         findAvailableDriver,
         setBooking,
         resetBooking,
