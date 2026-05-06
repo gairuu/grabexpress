@@ -103,33 +103,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
-  // ── Fetch deliveries when user changes AND set up Realtime ──
-  useEffect(() => {
-    if (!user) return;
-
-    fetchDeliveries();
-
-    // Set up Realtime subscription for "instant" updates
-    const channel = supabase
-      .channel('deliveries-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'deliveries',
-        },
-        () => {
-          console.log('Realtime update received for deliveries!');
-          fetchDeliveries();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, fetchDeliveries]);
 
   // ── Auth functions ──
   const signUp = useCallback(async (email: string, password: string, name: string, role: AppUser['role']) => {
@@ -272,6 +245,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setDeliveries(mapped);
     }
   }, [user]);
+
+  // ── Set up Realtime listener ──
+  useEffect(() => {
+    if (!user) return;
+
+    fetchDeliveries();
+
+    // Set up Realtime subscription for "instant" updates
+    const channel = supabase
+      .channel('deliveries-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'deliveries',
+        },
+        () => {
+          console.log('Realtime update received for deliveries!');
+          fetchDeliveries();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchDeliveries]);
 
   const addDelivery = useCallback(async (d: Omit<Delivery, 'id'>) => {
     const { data, error } = await supabase.from('deliveries').insert({
