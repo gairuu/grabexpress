@@ -39,12 +39,8 @@ export default function DriverDashboardPage() {
       router.push('/dashboard');
     }
 
-    // Refresh deliveries every 3 seconds to catch new jobs
-    const interval = setInterval(() => {
-      fetchDeliveries();
-    }, 3000);
-
-    return () => clearInterval(interval);
+    // We now have Realtime subscription in AppContext, so we don't need aggressive polling anymore.
+    // fetchDeliveries is called once on mount by AppContext.
   }, [user, router, loading, fetchDeliveries]);
 
   if (loading) {
@@ -74,6 +70,13 @@ export default function DriverDashboardPage() {
             <h1 className="text-2xl font-bold text-[#111827]">Driver Dashboard</h1>
             <p className="text-sm text-[#6b7280]">Manage assigned deliveries and update progress in real time.</p>
           </div>
+          <button 
+            onClick={() => fetchDeliveries()} 
+            className="flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-semibold text-[#374151] hover:bg-gray-50 shadow-sm"
+          >
+            <Clock size={16} />
+            Refresh
+          </button>
         </header>
 
         {actionError && (
