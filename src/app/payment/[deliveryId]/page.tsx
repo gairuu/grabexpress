@@ -30,35 +30,56 @@ export default function PaymentByIdPage() {
       return;
     }
 
-    const fetchDelivery = async () => {
-      setFetching(true);
-      const { data, error: fetchError } = await supabase
-        .from('deliveries')
-        .select('*')
-        .eq('id', params.deliveryId)
-        .single();
-
-      if (fetchError || !data) {
-        console.error("Payment: Delivery not found", fetchError);
-        router.push('/dashboard');
-        return;
-      }
-
-      setDelivery({
-        id: data.id,
-        customer_id: data.customer_id,
-        customer_name: data.customer_name,
-        driver_id: data.driver_id,
-        driver_name: data.driver_name,
-        pickup_location: data.pickup_location,
-        dropoff_location: data.dropoff_location,
-        delivery_status: data.delivery_status,
-        delivery_fee: data.delivery_fee,
-        payment_method: data.payment_method,
-        booking_time: data.booking_time,
-        estimated_time: data.estimated_time,
-      });
+    if (!params?.deliveryId) {
       setFetching(false);
+      return;
+    }
+
+    const fetchDelivery = async () => {
+      if (!params.deliveryId) return;
+      
+      try {
+        setFetching(true);
+        const { data, error: fetchError } = await supabase
+          .from('deliveries')
+          .select('*')
+          .eq('id', params.deliveryId)
+          .single();
+
+        if (fetchError || !data) {
+          console.error("Payment: Delivery not found", fetchError);
+          router.push('/dashboard');
+          return;
+        }
+
+        setDelivery({
+          id: data.id,
+          customer_id: data.customer_id,
+          customer_name: data.customer_name,
+          driver_id: data.driver_id,
+          driver_name: data.driver_name,
+          pickup_location: data.pickup_location,
+          dropoff_location: data.dropoff_location,
+          delivery_status: data.delivery_status,
+          delivery_fee: Number(data.delivery_fee),
+          payment_method: data.payment_method,
+          booking_time: data.booking_time,
+          estimated_time: data.estimated_time,
+          sender_name: data.sender_name,
+          sender_phone: data.sender_phone,
+          recipient_name: data.recipient_name,
+          recipient_phone: data.recipient_phone,
+          item_size: data.item_size,
+          item_weight: data.item_weight,
+          item_type: data.item_type,
+          vehicle_type: data.vehicle_type,
+        } as Delivery);
+      } catch (err) {
+        console.error("Payment: Unexpected error during fetch", err);
+        router.push('/dashboard');
+      } finally {
+        setFetching(false);
+      }
     };
 
     fetchDelivery();
