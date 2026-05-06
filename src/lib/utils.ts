@@ -10,7 +10,7 @@ export function calculateFee(pickup: string, dropoff: string): number {
 }
 
 export function getBestDriver(): Driver {
-  const available = mockDrivers.filter((d) => d.isAvailable);
+  const available = mockDrivers.filter((d) => d.status === 'available');
   // Always pick the highest-rated available driver
   return available.sort((a, b) => b.rating - a.rating)[0];
 }
