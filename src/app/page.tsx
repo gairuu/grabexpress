@@ -19,18 +19,18 @@ export default function LandingPage() {
             
             {/* White Hero Box */}
             <div className="overflow-hidden rounded-sm bg-white shadow-2xl flex flex-col md:flex-row min-h-[440px]">
-              {/* Left Content */}
-              <div className="flex-1 p-10 md:p-16 flex flex-col justify-center">
-                <h1 className="text-3xl md:text-5xl font-bold text-[#111827] leading-tight mb-12">
+              {/* Content centered since image is removed */}
+              <div className="flex-1 p-10 md:p-16 flex flex-col justify-center items-center text-center">
+                <h1 className="text-3xl md:text-5xl font-bold text-[#111827] leading-tight mb-12 max-w-2xl">
                   Plan, manage and track your deliveries with GrabExpress Web
                 </h1>
 
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 text-lg font-semibold text-[#111827]">
+                <div className="space-y-6 w-full max-w-md">
+                  <div className="flex items-center justify-center gap-2 text-lg font-semibold text-[#111827]">
                     Track your delivery <Info size={16} className="text-[#6b7280]" />
                   </div>
 
-                  <div className="flex max-w-lg overflow-hidden rounded-full border border-[#e5e7eb] bg-[#f3f5f7] p-1.5 focus-within:border-[#00B14F] transition-colors">
+                  <div className="flex w-full overflow-hidden rounded-full border border-[#e5e7eb] bg-[#f3f5f7] p-1.5 focus-within:border-[#00B14F] transition-colors">
                     <input 
                       type="text" 
                       placeholder="Enter order ID to track" 
@@ -41,15 +41,6 @@ export default function LandingPage() {
                     </button>
                   </div>
                 </div>
-              </div>
-
-              {/* Right Image */}
-              <div className="flex-1 relative overflow-hidden bg-[#e5e7eb]">
-                <img 
-                  src="/driver_hero.png" 
-                  alt="Grab Driver" 
-                  className="h-full w-full object-cover grayscale-[20%] contrast-[110%]"
-                />
               </div>
             </div>
 
