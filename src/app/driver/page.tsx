@@ -7,6 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Clock, Truck, CheckCircle2 } from 'lucide-react';
 import StatsCard from '@/components/StatsCard';
+import { supabase } from '@/lib/supabase';
 
 export default function DriverDashboardPage() {
   const { user, loading, deliveries, updateDeliveryStatus, fetchDeliveries } = useApp();
