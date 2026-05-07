@@ -80,6 +80,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Listen to auth state changes ──
   useEffect(() => {
+    // Safety net: force loading to false after 5 seconds
+    const safetyTimeout = setTimeout(() => {
+      if (loading) {
+        console.warn('Resilience Safety Net: Initial loading timed out after 5s.');
+        setLoading(false);
+      }
+    }, 5000);
+
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       try {
@@ -91,23 +99,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.error("Auth initialization profile fetch failed:", err);
       } finally {
         setLoading(false);
+        clearTimeout(safetyTimeout);
       }
+    }).catch(err => {
+      console.error("Critical auth session fetch error:", err);
+      setLoading(false);
+      clearTimeout(safetyTimeout);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const profile = await fetchProfile(session.user.id);
-          setUser(profile);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setDeliveries([]);
+        try {
+          if (event === 'SIGNED_IN' && session?.user) {
+            const profile = await fetchProfile(session.user.id);
+            setUser(profile);
+          } else if (event === 'SIGNED_OUT') {
+            setUser(null);
+            setDeliveries([]);
+          }
+        } catch (err) {
+          console.error("Auth change handling failed:", err);
+        } finally {
+          // Always ensure loading is false after an auth event completes
+          setLoading(false);
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
+    };
   }, [fetchProfile]);
 
 

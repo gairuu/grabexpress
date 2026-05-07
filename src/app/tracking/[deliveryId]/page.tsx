@@ -16,9 +16,13 @@ export default function TrackingByIdPage() {
   
   const [delivery, setDelivery] = useState<Delivery | null>(null);
   const [isVerifying, setIsVerifying] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchCurrentStatus = async () => {
     if (!params.deliveryId) return;
+    
+    setLoadError(null);
+    console.log(`[Tracking] Fetching status for: ${params.deliveryId}`);
     
     try {
       const { data, error } = await supabase
@@ -30,6 +34,7 @@ export default function TrackingByIdPage() {
       if (error) throw error;
       
       if (data) {
+        console.log('[Tracking] Data received:', data.delivery_status);
         // Map DB row to our Delivery type
         const mapped: Delivery = {
           id: data.id,
@@ -55,11 +60,14 @@ export default function TrackingByIdPage() {
         };
         setDelivery(mapped);
       } else {
-        console.error("Delivery not found:", params.deliveryId);
-        router.push('/book');
+        console.warn("[Tracking] Delivery not found:", params.deliveryId);
+        setLoadError("Delivery record not found.");
+        // Optional: redirect after some time if not found
+        // router.push('/book');
       }
-    } catch (err) {
-      console.error("Error fetching status:", err);
+    } catch (err: any) {
+      console.error("[Tracking] Error fetching status:", err);
+      setLoadError(err.message || "Failed to connect to database.");
     } finally {
       setIsVerifying(false);
     }
@@ -68,6 +76,15 @@ export default function TrackingByIdPage() {
   useEffect(() => {
     if (loading || !params.deliveryId) return;
     
+    // Safety timeout for verification
+    const timeout = setTimeout(() => {
+      if (isVerifying) {
+        console.warn("[Tracking] Verification timed out after 5s.");
+        setIsVerifying(false);
+        if (!delivery) setLoadError("Connection is slow. Please try again.");
+      }
+    }, 5000);
+
     // Initial fetch
     fetchCurrentStatus();
 
@@ -83,7 +100,7 @@ export default function TrackingByIdPage() {
           filter: `id=eq.${params.deliveryId}`,
         },
         (payload) => {
-          console.log('Real-time update received:', payload.new);
+          console.log('[Tracking] Real-time update received:', payload.new.delivery_status);
           const data = payload.new;
           const mapped: Delivery = {
             id: data.id,
@@ -108,11 +125,16 @@ export default function TrackingByIdPage() {
             vehicle_type: data.vehicle_type,
           };
           setDelivery(mapped);
+          setIsVerifying(false);
+          setLoadError(null);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[Tracking] Subscription status: ${status}`);
+      });
 
     return () => {
+      clearTimeout(timeout);
       supabase.removeChannel(channel);
     };
   }, [params.deliveryId, loading]);
@@ -148,6 +170,34 @@ export default function TrackingByIdPage() {
       <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center flex-col gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00B14F]"></div>
         <div className="text-[#6b7280] font-medium">Verifying delivery status...</div>
+      </div>
+    );
+  }
+
+  if (loadError && !delivery) {
+    return (
+      <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl text-center">
+          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Flag size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-[#111827] mb-2">Tracking Unreachable</h2>
+          <p className="text-[#6b7280] mb-8">{loadError}</p>
+          <div className="space-y-4">
+            <button 
+              onClick={() => { setIsVerifying(true); fetchCurrentStatus(); }}
+              className="w-full btn-primary py-3 font-bold"
+            >
+              Retry Connection
+            </button>
+            <button 
+              onClick={() => router.push('/dashboard')}
+              className="w-full py-3 text-sm font-semibold text-[#6b7280] hover:text-[#111827] transition-colors"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
