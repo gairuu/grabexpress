@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase';
 
 export default function PaymentByIdPage() {
   const router = useRouter();
-  const { user, loading, resetBooking } = useApp();
+  const { user, loading, resetBooking, booking } = useApp();
   const params = useParams<{ deliveryId: string }>();
   const [delivery, setDelivery] = useState<Delivery | null>(null);
   const [method, setMethod] = useState<PaymentMethod>('cash');
@@ -39,13 +39,36 @@ export default function PaymentByIdPage() {
     const fetchDelivery = async () => {
       if (!params.deliveryId) return;
       
+      // Safety timeout — fall back to booking context if fetch is slow
       const safetyTimeout = setTimeout(() => {
-        if (fetching) {
-          console.warn('[Payment] Fetching timed out after 5s');
-          setFetching(false);
-          setFetchTimeoutTriggered(true);
-          setError('The connection is slow. Please refresh the page.');
+        console.warn('[Payment] Fetching timed out — using booking context as fallback');
+        if (booking.id === params.deliveryId && booking.delivery_fee > 0) {
+          setDelivery({
+            id: booking.id,
+            customer_id: user?.id || '',
+            customer_name: user?.name || '',
+            driver_id: booking.driver?.id || '',
+            driver_name: booking.driver?.name || '',
+            pickup_location: booking.pickup_location,
+            dropoff_location: booking.dropoff_location,
+            delivery_status: booking.delivery_status || 'delivered',
+            delivery_fee: booking.delivery_fee,
+            payment_method: booking.payment_method,
+            booking_time: new Date().toISOString(),
+            estimated_time: '25-35 mins',
+            sender_name: booking.sender_name,
+            sender_phone: booking.sender_phone,
+            recipient_name: booking.recipient_name,
+            recipient_phone: booking.recipient_phone,
+            item_size: booking.item_size,
+            item_weight: booking.item_weight,
+            item_type: booking.item_type,
+            vehicle_type: booking.vehicle_type,
+          } as Delivery);
+        } else {
+          setError('Connection is slow. Please refresh the page.');
         }
+        setFetching(false);
       }, 5000);
 
       try {

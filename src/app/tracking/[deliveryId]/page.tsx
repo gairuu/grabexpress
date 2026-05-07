@@ -75,14 +75,16 @@ export default function TrackingByIdPage() {
   useEffect(() => {
     if (!params.deliveryId) return;
     
-    // Safety timeout — uses ref to avoid stale closure bug
+    // Safety timeout — if fetch hangs, fall back to booking context data silently.
+    // The real-time subscription is already active and will receive driver updates.
     const timeout = setTimeout(() => {
       if (!hasFetchedRef.current) {
-        console.warn("[Tracking] Verification timed out after 8s.");
+        console.warn("[Tracking] Verification timed out — falling back to booking context.");
         setIsVerifying(false);
-        setLoadError("Connection is slow. Please try again.");
+        // Don't set loadError: booking context already has pickup/dropoff/status
+        // Real-time listener will update delivery state when driver acts
       }
-    }, 8000);
+    }, 6000);
 
     // Initial fetch
     fetchCurrentStatus();
