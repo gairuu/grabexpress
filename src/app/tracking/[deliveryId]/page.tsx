@@ -154,7 +154,7 @@ export default function TrackingByIdPage() {
   useEffect(() => {
     if (realStatus === 'in_transit') {
       const interval = setInterval(() => {
-        setProgress((prev) => (prev >= 100 ? 100 : prev + 1));
+        setProgress((prev) => (prev >= 85 ? 85 : prev + 1));
       }, 200);
       return () => clearInterval(interval);
     } else if (realStatus === 'delivered') {
@@ -162,7 +162,7 @@ export default function TrackingByIdPage() {
     }
   }, [realStatus]);
 
-  if (loading || isVerifying) {
+  if (isVerifying) {
     return (
       <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center flex-col gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00B14F]"></div>
@@ -239,6 +239,11 @@ export default function TrackingByIdPage() {
                       style={{ width: `${progress}%` }}
                     />
                   </div>
+                  {realStatus === 'in_transit' && progress >= 85 && (
+                    <p className="mt-3 text-xs text-center text-[#9ca3af] font-medium animate-pulse">
+                      ⏳ Awaiting driver delivery confirmation...
+                    </p>
+                  )}
                 </div>
               )}
 
