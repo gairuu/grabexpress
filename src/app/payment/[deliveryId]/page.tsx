@@ -132,12 +132,22 @@ export default function PaymentByIdPage() {
     setError('');
 
     try {
-      const { error: updateError } = await supabase
-        .from('deliveries')
-        .update({ payment_method: method })
-        .eq('id', delivery.id);
+      // 8-second timeout for the database update
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database update timed out. Please try again.')), 8000)
+      );
 
-      if (updateError) throw updateError;
+      const updatePromise = (async () => {
+        const { error: updateError } = await supabase
+          .from('deliveries')
+          .update({ payment_method: method })
+          .eq('id', delivery.id);
+        
+        if (updateError) throw updateError;
+        return true;
+      })();
+
+      await Promise.race([updatePromise, timeoutPromise]);
 
       setIsPaid(true);
     } catch (err: any) {

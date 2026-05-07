@@ -450,95 +450,110 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchDeliveries]);
 
   const bookAndMatch = useCallback(async (deliveryData: Omit<Delivery, 'id'>) => {
-    // 1. Find available driver
-    const { data: driver, error: driverError } = await supabase
-      .from('drivers')
-      .select('*, profiles(name, contact_number)')
-      .eq('status', 'available')
-      .limit(1)
-      .maybeSingle();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Matching timed out. Please try again.')), 10000)
+    );
 
-    if (driverError) throw new Error(`Driver search failed: ${driverError.message}`);
-    if (!driver) throw new Error("No available drivers found. Please try again in a moment.");
+    const bookingFlow = (async () => {
+      // 1. Find available driver (Simple select first to avoid join hang)
+      const { data: driver, error: driverError } = await supabase
+        .from('drivers')
+        .select('*')
+        .eq('status', 'available')
+        .limit(1)
+        .maybeSingle();
 
-    // 2. Create delivery with that driver
-    const { data: delivery, error: deliveryError } = await supabase
-      .from('deliveries')
-      .insert({
+      if (driverError) throw new Error(`Driver search failed: ${driverError.message}`);
+      if (!driver) throw new Error("No available drivers found. Please try again in a moment.");
+
+      // 1.5 Fetch profile separately
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name, contact_number')
+        .eq('id', driver.id)
+        .maybeSingle();
+
+      // 2. Create delivery with that driver
+      const { data: delivery, error: deliveryError } = await supabase
+        .from('deliveries')
+        .insert({
+          customer_id: deliveryData.customer_id,
+          customer_name: deliveryData.customer_name,
+          driver_id: driver.id,
+          driver_name: profile?.name || 'Driver',
+          pickup_location: deliveryData.pickup_location,
+          dropoff_location: deliveryData.dropoff_location,
+          delivery_status: 'pending',
+          delivery_fee: deliveryData.delivery_fee,
+          payment_method: deliveryData.payment_method,
+          item_size: deliveryData.item_size,
+          item_weight: deliveryData.item_weight,
+          item_type: deliveryData.item_type,
+          vehicle_type: deliveryData.vehicle_type,
+          sender_name: deliveryData.sender_name,
+          sender_phone: deliveryData.sender_phone,
+          recipient_name: deliveryData.recipient_name,
+          recipient_phone: deliveryData.recipient_phone
+        })
+        .select()
+        .single();
+
+      if (deliveryError) throw new Error(`Booking failed: ${deliveryError.message}`);
+
+      // 3. Mark driver busy
+      await supabase.from('drivers').update({ status: 'busy' }).eq('id', driver.id);
+
+      // 4. Update local booking state for the UI
+      const mappedDriver = {
+        id: driver.id,
+        name: profile?.name || 'Driver',
+        avatar: (profile?.name || 'DR').slice(0, 2).toUpperCase(),
+        vehicle: driver.vehicle_type,
+        plate_number: driver.plate_number,
+        rating: driver.rating,
+        totalDeliveries: 0,
+        status: 'busy' as const,
+        contact_number: profile?.contact_number || '',
+      };
+
+      const newDelivery: Delivery = {
+        id: delivery.id,
         customer_id: deliveryData.customer_id,
         customer_name: deliveryData.customer_name,
         driver_id: driver.id,
-        driver_name: driver.profiles?.name || 'Driver',
+        driver_name: profile?.name || 'Driver',
         pickup_location: deliveryData.pickup_location,
         dropoff_location: deliveryData.dropoff_location,
         delivery_status: 'pending',
         delivery_fee: deliveryData.delivery_fee,
         payment_method: deliveryData.payment_method,
+        estimated_time: '25-35 mins',
+        booking_time: new Date().toISOString(),
+        sender_name: deliveryData.sender_name,
+        sender_phone: deliveryData.sender_phone,
+        recipient_name: deliveryData.recipient_name,
+        recipient_phone: deliveryData.recipient_phone,
         item_size: deliveryData.item_size,
         item_weight: deliveryData.item_weight,
         item_type: deliveryData.item_type,
         vehicle_type: deliveryData.vehicle_type,
-        sender_name: deliveryData.sender_name,
-        sender_phone: deliveryData.sender_phone,
-        recipient_name: deliveryData.recipient_name,
-        recipient_phone: deliveryData.recipient_phone
-      })
-      .select()
-      .single();
+      };
 
-    if (deliveryError) throw new Error(`Booking failed: ${deliveryError.message}`);
+      setBookingState(prev => ({
+        ...prev,
+        id: delivery.id,
+        driver: mappedDriver
+      }));
 
-    // 3. Mark driver busy
-    await supabase.from('drivers').update({ status: 'busy' }).eq('id', driver.id);
+      // Optimistically add to deliveries list so tracking page sees it immediately
+      setDeliveries(prev => [newDelivery, ...prev]);
 
-    // 4. Update local booking state for the UI
-    const mappedDriver = {
-      id: driver.id,
-      name: driver.profiles?.name || 'Driver',
-      avatar: (driver.profiles?.name || 'DR').slice(0, 2).toUpperCase(),
-      vehicle: driver.vehicle_type,
-      plate_number: driver.plate_number,
-      rating: driver.rating,
-      totalDeliveries: 0,
-      status: 'busy' as const,
-      contact_number: driver.profiles?.contact_number || '',
-    };
+      // Fire fetchDeliveries in background — don't await it, it blocks the return
+      fetchDeliveries();
+      return delivery.id;
+    })();
 
-    const newDelivery: Delivery = {
-      id: delivery.id,
-      customer_id: deliveryData.customer_id,
-      customer_name: deliveryData.customer_name,
-      driver_id: driver.id,
-      driver_name: driver.profiles?.name || 'Driver',
-      pickup_location: deliveryData.pickup_location,
-      dropoff_location: deliveryData.dropoff_location,
-      delivery_status: 'pending',
-      delivery_fee: deliveryData.delivery_fee,
-      payment_method: deliveryData.payment_method,
-      estimated_time: '25-35 mins',
-      booking_time: new Date().toISOString(),
-      sender_name: deliveryData.sender_name,
-      sender_phone: deliveryData.sender_phone,
-      recipient_name: deliveryData.recipient_name,
-      recipient_phone: deliveryData.recipient_phone,
-      item_size: deliveryData.item_size,
-      item_weight: deliveryData.item_weight,
-      item_type: deliveryData.item_type,
-      vehicle_type: deliveryData.vehicle_type,
-    };
-
-    setBookingState(prev => ({
-      ...prev,
-      id: delivery.id,
-      driver: mappedDriver
-    }));
-
-    // Optimistically add to deliveries list so tracking page sees it immediately
-    setDeliveries(prev => [newDelivery, ...prev]);
-
-    // Fire fetchDeliveries in background — don't await it, it blocks the return
-    fetchDeliveries();
-    return delivery.id;
+    return await Promise.race([bookingFlow, timeoutPromise]) as string;
   }, [fetchDeliveries]);
 
   const findAvailableDriver = useCallback(async () => {
