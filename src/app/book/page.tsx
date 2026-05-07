@@ -102,7 +102,7 @@ export default function BookDeliveryPage() {
                       : 'bg-[#e5e7eb] text-[#9ca3af] cursor-not-allowed shadow-none'
                   }`}
                 >
-                  {pickup && dropoff ? 'Confirm Booking' : 'Enter locations to continue'}
+                  Confirm Booking
                 </button>
               </div>
             </form>

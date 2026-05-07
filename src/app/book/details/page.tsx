@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import Navbar from '@/components/Navbar';
-import { MapPin, Package, Truck, ShieldCheck, CreditCard, ChevronRight, Info, Bike, Car, Box } from 'lucide-react';
+import { MapPin, Package, Truck, ShieldCheck, CreditCard, ChevronRight, Info, Bike, Car, Box, Flag } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
 const ITEM_TYPES = ['Documents', 'Food & Beverages', 'Clothing', 'Electronics', 'Fragile Items', 'Others'];
@@ -305,7 +305,7 @@ export default function BookingDetailsPage() {
                     : 'bg-[#e5e7eb] text-[#9ca3af] cursor-not-allowed shadow-none'
                 }`}
               >
-                {isFormValid ? 'Book 1 Delivery' : 'Fill all fields to book'}
+                Book 1 Delivery
               </button>
             </div>
           </div>
