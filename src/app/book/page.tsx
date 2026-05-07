@@ -61,7 +61,7 @@ export default function BookDeliveryPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-[#6b7280] mb-2 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[var(--grab-green)]"></span> Pickup Location
+                    <span className="w-2 h-2 rounded-full bg-[#00B14F]"></span> Pickup Location
                   </label>
                   <input 
                     type="text" 
@@ -74,7 +74,7 @@ export default function BookDeliveryPage() {
                 </div>
 
                 <div className="flex justify-center py-2">
-                  <div className="w-1 h-8 border-l-2 border-dashed border-[var(--border-subtle)]"></div>
+                  <div className="w-1 h-8 border-l-2 border-dashed border-[#e5e7eb]"></div>
                 </div>
 
                 <div>
@@ -93,8 +93,16 @@ export default function BookDeliveryPage() {
               </div>
 
               <div className="pt-4">
-                <button type="submit" className="btn-primary py-4 text-lg font-bold" disabled={!pickup || !dropoff}>
-                  Confirm Booking
+                <button 
+                  type="submit" 
+                  disabled={!pickup || !dropoff}
+                  className={`w-full font-bold py-4 rounded-xl transition-all shadow-lg grab-glow ${
+                    pickup && dropoff 
+                      ? 'bg-[#00B14F] hover:bg-[#009940] text-white shadow-[#00B14F]/20' 
+                      : 'bg-[#e5e7eb] text-[#9ca3af] cursor-not-allowed shadow-none'
+                  }`}
+                >
+                  {pickup && dropoff ? 'Confirm Booking' : 'Enter locations to continue'}
                 </button>
               </div>
             </form>
@@ -104,27 +112,27 @@ export default function BookDeliveryPage() {
             <div className="rounded-xl border border-[#e5e7eb] bg-white p-8 sticky top-24 shadow-sm">
               <h3 className="text-lg font-bold text-[#111827] mb-6">Price Summary</h3>
               
-              <div className="space-y-4 border-b border-[var(--border-subtle)] pb-6 mb-6 text-sm">
+              <div className="space-y-4 border-b border-[#e5e7eb] pb-6 mb-6 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Base Fare</span>
+                  <span className="text-[#6b7280]">Base Fare</span>
                   <span className="text-[#111827]">₱49.00</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Distance Fee</span>
+                  <span className="text-[#6b7280]">Distance Fee</span>
                   <span className="text-[#111827]">{fee > 0 ? formatCurrency(fee - 49) : '₱0.00'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Insurance</span>
-                  <span className="text-[var(--grab-green)]">FREE</span>
+                  <span className="text-[#6b7280]">Insurance</span>
+                  <span className="text-[#00B14F]">FREE</span>
                 </div>
               </div>
 
               <div className="flex justify-between items-end mb-4">
-                <span className="text-[var(--text-secondary)] font-medium">Total Estimate</span>
-                <span className="text-3xl font-black text-[var(--grab-green)]">{formatCurrency(fee)}</span>
+                <span className="text-[#6b7280] font-medium">Total Estimate</span>
+                <span className="text-3xl font-black text-[#00B14F]">{formatCurrency(fee)}</span>
               </div>
               
-              <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-wider text-center">
+              <p className="text-[#9ca3af] text-[10px] uppercase tracking-wider text-center">
                 Prices may vary during peak hours
               </p>
             </div>

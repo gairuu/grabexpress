@@ -44,8 +44,16 @@ export default function BookingDetailsPage() {
   const guaranteePrice = guarantee === 'standard' ? 7 : guarantee === 'premium' ? 9 : 0;
   
   const totalPrice = (baseFare + distanceFare + vehicleExtra) * sizeMultiplier + guaranteePrice;
+  
+  const isFormValid = 
+    senderName.trim() !== '' && 
+    senderPhone.trim() !== '' && 
+    recipientName.trim() !== '' && 
+    recipientPhone.trim() !== '';
 
   const handleBook = () => {
+    if (!isFormValid) return;
+    
     setBooking({
       sender_name: senderName,
       sender_phone: senderPhone,
@@ -101,6 +109,7 @@ export default function BookingDetailsPage() {
                           className="grab-input-sm"
                           value={senderName}
                           onChange={e => setSenderName(e.target.value)}
+                          required
                         />
                         <input 
                           type="text" 
@@ -108,6 +117,7 @@ export default function BookingDetailsPage() {
                           className="grab-input-sm"
                           value={senderPhone}
                           onChange={e => setSenderPhone(e.target.value)}
+                          required
                         />
                       </div>
                     </div>
@@ -125,6 +135,7 @@ export default function BookingDetailsPage() {
                           className="grab-input-sm"
                           value={recipientName}
                           onChange={e => setRecipientName(e.target.value)}
+                          required
                         />
                         <input 
                           type="text" 
@@ -132,6 +143,7 @@ export default function BookingDetailsPage() {
                           className="grab-input-sm"
                           value={recipientPhone}
                           onChange={e => setRecipientPhone(e.target.value)}
+                          required
                         />
                       </div>
                     </div>
@@ -286,9 +298,14 @@ export default function BookingDetailsPage() {
 
               <button 
                 onClick={handleBook}
-                className="w-full bg-[#00B14F] hover:bg-[#009940] text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-[#00B14F]/20 grab-glow"
+                disabled={!isFormValid}
+                className={`w-full font-bold py-4 rounded-xl transition-all shadow-lg grab-glow ${
+                  isFormValid 
+                    ? 'bg-[#00B14F] hover:bg-[#009940] text-white shadow-[#00B14F]/20' 
+                    : 'bg-[#e5e7eb] text-[#9ca3af] cursor-not-allowed shadow-none'
+                }`}
               >
-                Book 1 Delivery
+                {isFormValid ? 'Book 1 Delivery' : 'Fill all fields to book'}
               </button>
             </div>
           </div>
