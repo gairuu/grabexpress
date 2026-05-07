@@ -21,7 +21,8 @@ export default function PaymentByIdPage() {
   const [isPaid, setIsPaid] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
-  const [fetching, setFetching] = useState(true);
+   const [fetching, setFetching] = useState(true);
+   const [fetchTimeoutTriggered, setFetchTimeoutTriggered] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -38,6 +39,15 @@ export default function PaymentByIdPage() {
     const fetchDelivery = async () => {
       if (!params.deliveryId) return;
       
+      const safetyTimeout = setTimeout(() => {
+        if (fetching) {
+          console.warn('[Payment] Fetching timed out after 5s');
+          setFetching(false);
+          setFetchTimeoutTriggered(true);
+          setError('The connection is slow. Please refresh the page.');
+        }
+      }, 5000);
+
       try {
         setFetching(true);
         const { data, error: fetchError } = await supabase
@@ -79,6 +89,7 @@ export default function PaymentByIdPage() {
         router.push('/dashboard');
       } finally {
         setFetching(false);
+        clearTimeout(safetyTimeout);
       }
     };
 
