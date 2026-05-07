@@ -144,18 +144,22 @@ export default function PaymentByIdPage() {
     setIsProcessing(false);
 
     // 3. Fire the database update in the background (don't await it)
-    supabase
-      .from('deliveries')
-      .update({ payment_method: method })
-      .eq('id', delivery.id)
-      .then(({ error: updateError }) => {
+    (async () => {
+      try {
+        const { error: updateError } = await supabase
+          .from('deliveries')
+          .update({ payment_method: method })
+          .eq('id', delivery.id);
+
         if (updateError) {
           console.error('Background payment update failed:', updateError);
         } else {
           console.log('Background payment update successful');
         }
-      })
-      .catch(err => console.error('Background payment update crash:', err));
+      } catch (err) {
+        console.error('Background payment update crash:', err);
+      }
+    })();
   };
 
   const methodLabels = {
