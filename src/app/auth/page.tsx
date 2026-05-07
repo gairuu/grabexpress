@@ -43,8 +43,9 @@ export default function AuthPage() {
           setIsSubmitting(false);
           return;
         }
-        // Successful login will be handled by the useEffect redirect
+        // Login succeeded — reset button immediately, let useEffect handle redirect
         console.log('Login successful, waiting for redirect...');
+        setIsSubmitting(false);
         return;
       } else {
         console.log('Attempting signup with role:', role);

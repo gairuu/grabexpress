@@ -27,13 +27,7 @@ export default function TrackingByIdPage() {
     try {
       const { data, error } = await supabase
         .from('deliveries')
-        .select(`
-          *,
-          driver_profiles:driver_id (
-            name,
-            contact_number
-          )
-        `)
+        .select('*')
         .eq('id', params.deliveryId)
         .maybeSingle();
 
@@ -41,17 +35,12 @@ export default function TrackingByIdPage() {
       
       if (data) {
         console.log('[Tracking] Data received:', data.delivery_status);
-        
-        // Extract profile data from the join
-        const driverProfile = (data.driver_profiles as any);
-
-        // Map DB row to our Delivery type
         const mapped: Delivery = {
           id: data.id,
           customer_id: data.customer_id,
           customer_name: data.customer_name,
           driver_id: data.driver_id || '',
-          driver_name: data.driver_name || driverProfile?.name || '',
+          driver_name: data.driver_name || '',
           pickup_location: data.pickup_location,
           dropoff_location: data.dropoff_location,
           delivery_status: data.delivery_status as DeliveryStatus,
@@ -67,20 +56,11 @@ export default function TrackingByIdPage() {
           item_weight: data.item_weight,
           item_type: data.item_type,
           vehicle_type: data.vehicle_type,
-          // We can't easily add contact_number to the Delivery type without changing it, 
-          // so we'll store it in a local variable or use a partial update
         };
         setDelivery(mapped);
-        
-        // Let's also update the displayDriver logic to use the fetched contact number
-        if (driverProfile?.contact_number) {
-          (mapped as any).driver_contact = driverProfile.contact_number;
-        }
       } else {
         console.warn("[Tracking] Delivery not found:", params.deliveryId);
         setLoadError("Delivery record not found.");
-        // Optional: redirect after some time if not found
-        // router.push('/book');
       }
     } catch (err: any) {
       console.error("[Tracking] Error fetching status:", err);
@@ -91,7 +71,7 @@ export default function TrackingByIdPage() {
   };
 
   useEffect(() => {
-    if (loading || !params.deliveryId) return;
+    if (!params.deliveryId) return;
     
     // Safety timeout for verification
     const timeout = setTimeout(() => {
@@ -154,7 +134,7 @@ export default function TrackingByIdPage() {
       clearTimeout(timeout);
       supabase.removeChannel(channel);
     };
-  }, [params.deliveryId, loading]);
+  }, [params.deliveryId]);
 
   // Use state delivery or fallback to context booking
   const realStatus = delivery?.delivery_status || booking.delivery_status || 'pending';
