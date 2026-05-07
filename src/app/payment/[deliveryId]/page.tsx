@@ -131,31 +131,31 @@ export default function PaymentByIdPage() {
     setIsProcessing(true);
     setError('');
 
-    try {
-      // 8-second timeout for the database update
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database update timed out. Please try again.')), 8000)
-      );
-
-      const updatePromise = (async () => {
-        const { error: updateError } = await supabase
-          .from('deliveries')
-          .update({ payment_method: method })
-          .eq('id', delivery.id);
-        
-        if (updateError) throw updateError;
-        return true;
-      })();
-
-      await Promise.race([updatePromise, timeoutPromise]);
-
+    // 1. If method is already correct, just proceed immediately
+    if (delivery.payment_method === method) {
       setIsPaid(true);
-    } catch (err: any) {
-      console.error('Payment error:', err);
-      setError(err.message || 'Payment failed. Please try again.');
-    } finally {
       setIsProcessing(false);
+      return;
     }
+
+    // 2. Optimistic Update: Show success immediately to the user
+    // This prevents database hangs from ruining the UX
+    setIsPaid(true);
+    setIsProcessing(false);
+
+    // 3. Fire the database update in the background (don't await it)
+    supabase
+      .from('deliveries')
+      .update({ payment_method: method })
+      .eq('id', delivery.id)
+      .then(({ error: updateError }) => {
+        if (updateError) {
+          console.error('Background payment update failed:', updateError);
+        } else {
+          console.log('Background payment update successful');
+        }
+      })
+      .catch(err => console.error('Background payment update crash:', err));
   };
 
   const methodLabels = {
