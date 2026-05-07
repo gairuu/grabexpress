@@ -18,21 +18,53 @@ export default function DriverDashboardPage() {
   const [statusLoading, setStatusLoading] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
+    
+    // Initial fetch of driver status
     const fetchStatus = async () => {
-      if (!user) return;
       const { data } = await supabase.from('drivers').select('status').eq('id', user.id).maybeSingle();
       if (data) setDriverStatus(data.status as any);
     };
     fetchStatus();
+
+    // Real-time listener for this specific driver's status
+    const channel = supabase
+      .channel(`driver-status-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'drivers',
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[Driver] Status update received:', payload.new.status);
+          setDriverStatus(payload.new.status as any);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const toggleAvailability = async () => {
     if (!user) return;
     setStatusLoading(true);
     const newStatus = driverStatus === 'available' ? 'busy' : 'available';
-    const { error } = await supabase.from('drivers').update({ status: newStatus }).eq('id', user.id);
-    if (!error) setDriverStatus(newStatus);
-    setStatusLoading(false);
+    
+    try {
+      const { error } = await supabase.from('drivers').update({ status: newStatus }).eq('id', user.id);
+      if (error) throw error;
+      // Note: Local state will be updated by the Real-time listener
+    } catch (err: any) {
+      console.error('[Driver] Toggle availability failed:', err);
+      setActionError('Failed to update status. Please try again.');
+    } finally {
+      setStatusLoading(false);
+    }
   };
 
   const handleStatusUpdate = async (id: string, status: 'in_transit' | 'delivered' | 'cancelled') => {
@@ -49,15 +81,16 @@ export default function DriverDashboardPage() {
     }, 12000);
 
     try {
+      console.log(`[Driver] Updating status for ${id} to ${status}`);
       await updateDeliveryStatus(id, status);
       clearTimeout(safetyTimeout);
-      // Re-fetch driver status after finishing a job
-      if ((status === 'delivered' || status === 'cancelled') && user) {
-        const { data } = await supabase.from('drivers').select('status').eq('id', user.id).maybeSingle();
-        if (data) setDriverStatus(data.status as any);
-      }
+      
+      // Manual refresh of deliveries just in case
+      await fetchDeliveries();
+      
     } catch (err: any) {
       clearTimeout(safetyTimeout);
+      console.error('[Driver] Status update failed:', err);
       setActionError(err.message || 'Failed to update status. Please try again.');
     } finally {
       setLoadingId(null);

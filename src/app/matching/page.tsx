@@ -21,8 +21,12 @@ export default function MatchingPage() {
     if (loading || !user || !booking.pickup_location || hasBooked.current) return;
     hasBooked.current = true;
 
-    const runBookingFlow = async () => {
+    const runBookingFlow = async (retries = 3) => {
       try {
+        setErrorMsg('');
+        setIsMatching(true);
+        console.log(`[Matching] Attempting to match... (${3 - retries + 1}/3)`);
+        
         // Simulated search delay for premium feel
         await new Promise(resolve => setTimeout(resolve, 3500));
 
@@ -52,14 +56,19 @@ export default function MatchingPage() {
         setIsMatching(false);
       } catch (err: any) {
         console.error("Booking flow failed:", err);
-        setErrorMsg(err.message || "No drivers found. Please ensure a driver is online and try again.");
-        setShowRetry(true);
-        setIsMatching(false);
+        if (retries > 1) {
+          console.log("[Matching] Retrying in 5s...");
+          setTimeout(() => runBookingFlow(retries - 1), 5000);
+        } else {
+          setErrorMsg(err.message || "No drivers found. Please ensure a driver is online and try again.");
+          setShowRetry(true);
+          setIsMatching(false);
+        }
       }
     };
 
     runBookingFlow();
-  }, [user, booking, loading, bookAndMatch, createdDeliveryId]);
+  }, [user, booking, loading, bookAndMatch]);
 
   const handleStart = () => {
     if (!createdDeliveryId) return;
