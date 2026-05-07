@@ -1,6 +1,6 @@
 'use client';
 import { Flag, RefreshCw } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import Navbar from '@/components/Navbar';
@@ -17,6 +17,7 @@ export default function TrackingByIdPage() {
   const [delivery, setDelivery] = useState<Delivery | null>(null);
   const [isVerifying, setIsVerifying] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false); // ref avoids stale closure in timeout
 
   const fetchCurrentStatus = async () => {
     if (!params.deliveryId) return;
@@ -58,6 +59,7 @@ export default function TrackingByIdPage() {
           vehicle_type: data.vehicle_type,
         };
         setDelivery(mapped);
+        hasFetchedRef.current = true; // mark as fetched successfully
       } else {
         console.warn("[Tracking] Delivery not found:", params.deliveryId);
         setLoadError("Delivery record not found.");
@@ -73,14 +75,14 @@ export default function TrackingByIdPage() {
   useEffect(() => {
     if (!params.deliveryId) return;
     
-    // Safety timeout for verification
+    // Safety timeout — uses ref to avoid stale closure bug
     const timeout = setTimeout(() => {
-      if (isVerifying) {
-        console.warn("[Tracking] Verification timed out after 5s.");
+      if (!hasFetchedRef.current) {
+        console.warn("[Tracking] Verification timed out after 8s.");
         setIsVerifying(false);
-        if (!delivery) setLoadError("Connection is slow. Please try again.");
+        setLoadError("Connection is slow. Please try again.");
       }
-    }, 5000);
+    }, 8000);
 
     // Initial fetch
     fetchCurrentStatus();
@@ -182,7 +184,7 @@ export default function TrackingByIdPage() {
           <p className="text-[#6b7280] mb-8">{loadError}</p>
           <div className="space-y-4">
             <button 
-              onClick={() => { setIsVerifying(true); fetchCurrentStatus(); }}
+              onClick={() => { hasFetchedRef.current = false; setIsVerifying(true); fetchCurrentStatus(); }}
               className="w-full btn-primary py-3 font-bold"
             >
               Retry Connection
