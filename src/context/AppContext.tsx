@@ -536,7 +536,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Optimistically add to deliveries list so tracking page sees it immediately
     setDeliveries(prev => [newDelivery, ...prev]);
 
-    await fetchDeliveries();
+    // Fire fetchDeliveries in background — don't await it, it blocks the return
+    fetchDeliveries();
     return delivery.id;
   }, [fetchDeliveries]);
 

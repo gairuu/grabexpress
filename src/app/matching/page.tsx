@@ -68,7 +68,8 @@ export default function MatchingPage() {
     };
 
     runBookingFlow();
-  }, [user, booking, loading, bookAndMatch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, booking.pickup_location]);
 
   const handleStart = () => {
     if (!createdDeliveryId) return;
