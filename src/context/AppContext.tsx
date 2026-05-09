@@ -450,7 +450,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchDeliveries]);
 
   const bookAndMatch = useCallback(async (deliveryData: Omit<Delivery, 'id'>) => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout | undefined;
     const timeoutPromise = new Promise((_, reject) => {
       timeoutId = setTimeout(() => reject(new Error('Matching timed out. Please try again.')), 15000);
     });
