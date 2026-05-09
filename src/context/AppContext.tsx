@@ -109,21 +109,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        try {
-          if (event === 'SIGNED_IN' && session?.user) {
-            const profile = await fetchProfile(session.user.id);
-            setUser(profile);
-          } else if (event === 'SIGNED_OUT') {
-            setUser(null);
-            setDeliveries([]);
+      (event, session) => {
+        // Use setTimeout to yield the event loop. This is CRITICAL to prevent a known 
+        // Supabase JS deadlock where calling supabase API methods inside onAuthStateChange 
+        // blocks the internal navigator.locks, causing all subsequent queries to hang indefinitely.
+        setTimeout(async () => {
+          try {
+            if (event === 'SIGNED_IN' && session?.user) {
+              const profile = await fetchProfile(session.user.id);
+              setUser(profile);
+            } else if (event === 'SIGNED_OUT') {
+              setUser(null);
+              setDeliveries([]);
+            }
+          } catch (err) {
+            console.error("Auth change handling failed:", err);
+          } finally {
+            setLoading(false);
           }
-        } catch (err) {
-          console.error("Auth change handling failed:", err);
-        } finally {
-          // Always ensure loading is false after an auth event completes
-          setLoading(false);
-        }
+        }, 0);
       }
     );
 
