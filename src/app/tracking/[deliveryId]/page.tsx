@@ -6,8 +6,22 @@ import { useApp } from '@/context/AppContext';
 import Navbar from '@/components/Navbar';
 import DriverCard from '@/components/DriverCard';
 import StatusTimeline from '@/components/StatusTimeline';
+import Map from '@/components/Map';
 import { DeliveryStatus, Delivery } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
+
+function parseOrMockCoords(location: string, defaultOffset: number = 0): [number, number] {
+  if (!location) return [14.5995 + defaultOffset, 120.9842 + defaultOffset];
+  const match = location.match(/Lat: ([-\d.]+), Lng: ([-\d.]+)/);
+  if (match) {
+    return [parseFloat(match[1]), parseFloat(match[2])];
+  }
+  let hash = 0;
+  for (let i = 0; i < location.length; i++) hash = location.charCodeAt(i) + ((hash << 5) - hash);
+  const latOffset = (hash % 100) / 10000;
+  const lngOffset = ((hash >> 4) % 100) / 10000;
+  return [14.5995 + defaultOffset + latOffset, 120.9842 + defaultOffset + lngOffset];
+}
 
 export default function TrackingByIdPage() {
   const { booking, user, loading } = useApp();
@@ -17,7 +31,7 @@ export default function TrackingByIdPage() {
   const [delivery, setDelivery] = useState<Delivery | null>(null);
   const [isVerifying, setIsVerifying] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const hasFetchedRef = useRef(false); // ref avoids stale closure in timeout
+  const hasFetchedRef = useRef(false);
 
   const fetchCurrentStatus = async () => {
     if (!params.deliveryId) return;
@@ -59,7 +73,7 @@ export default function TrackingByIdPage() {
           vehicle_type: data.vehicle_type,
         };
         setDelivery(mapped);
-        hasFetchedRef.current = true; // mark as fetched successfully
+        hasFetchedRef.current = true;
       } else {
         console.warn("[Tracking] Delivery not found:", params.deliveryId);
         setLoadError("Delivery record not found.");
@@ -75,21 +89,15 @@ export default function TrackingByIdPage() {
   useEffect(() => {
     if (!params.deliveryId) return;
     
-    // Safety timeout — if fetch hangs, fall back to booking context data silently.
-    // The real-time subscription is already active and will receive driver updates.
     const timeout = setTimeout(() => {
       if (!hasFetchedRef.current) {
         console.warn("[Tracking] Verification timed out — falling back to booking context.");
         setIsVerifying(false);
-        // Don't set loadError: booking context already has pickup/dropoff/status
-        // Real-time listener will update delivery state when driver acts
       }
     }, 6000);
 
-    // Initial fetch
     fetchCurrentStatus();
 
-    // Subscribe to real-time changes for this specific delivery
     const channel = supabase
       .channel(`delivery-${params.deliveryId}`)
       .on(
@@ -140,7 +148,6 @@ export default function TrackingByIdPage() {
     };
   }, [params.deliveryId]);
 
-  // Use state delivery or fallback to context booking
   const realStatus = delivery?.delivery_status || booking.delivery_status || 'pending';
   const displayDriver = delivery?.driver_id ? {
     id: delivery.driver_id,
@@ -208,11 +215,21 @@ export default function TrackingByIdPage() {
     return null;
   }
 
+  const pickupStr = delivery?.pickup_location || booking.pickup_location;
+  const dropoffStr = delivery?.dropoff_location || booking.dropoff_location;
+
+  const pickupCoords = parseOrMockCoords(pickupStr, 0);
+  const dropoffCoords = parseOrMockCoords(dropoffStr, 0.02);
+
+  const driverLat = pickupCoords[0] + (dropoffCoords[0] - pickupCoords[0]) * (progress / 100);
+  const driverLng = pickupCoords[1] + (dropoffCoords[1] - pickupCoords[1]) * (progress / 100);
+  const driverCoords: [number, number] = [driverLat, driverLng];
+
   return (
     <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937] flex flex-col">
       <Navbar />
 
-      <main className="flex-1 w-full max-w-4xl mx-auto p-6 md:p-10">
+      <main className="flex-1 w-full max-w-5xl mx-auto p-6 md:p-10">
         <header className="mb-10 text-center relative">
           <h1 className="text-3xl font-extrabold text-[#111827] mb-2">Delivery in Progress</h1>
           <p className="text-[#6b7280]">Real-time status updates for your package.</p>
@@ -226,7 +243,7 @@ export default function TrackingByIdPage() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
-          <div className="md:col-span-3">
+          <div className="md:col-span-3 space-y-6">
             <div className="rounded-xl border border-[#e5e7eb] bg-white p-8 shadow-sm">
               <h3 className="text-lg font-bold text-[#111827] mb-8">Tracking Details</h3>
               <StatusTimeline currentStatus={realStatus} />
@@ -265,6 +282,21 @@ export default function TrackingByIdPage() {
                 </div>
               )}
             </div>
+
+            {/* Live Map Integration */}
+            <div className="rounded-xl border border-[#e5e7eb] bg-white shadow-sm overflow-hidden h-[400px] flex flex-col">
+              <div className="p-4 border-b border-[#e5e7eb] bg-gray-50">
+                <span className="text-sm font-bold text-[#111827]">Live Map Tracker</span>
+              </div>
+              <div className="flex-1 w-full h-full relative z-0">
+                <Map 
+                  pickup={pickupCoords} 
+                  dropoff={dropoffCoords} 
+                  driver={realStatus === 'pending' ? null : driverCoords} 
+                  interactive={true} 
+                />
+              </div>
+            </div>
           </div>
 
           <div className="md:col-span-2 space-y-6">
@@ -280,14 +312,14 @@ export default function TrackingByIdPage() {
                   <div className="w-2 h-2 rounded-full bg-[#00B14F] mt-1.5 flex-shrink-0"></div>
                   <div>
                     <div className="text-[10px] text-[#9ca3af] uppercase font-bold">Pickup</div>
-                    <div className="text-sm text-[#111827] font-medium">{delivery?.pickup_location || booking.pickup_location}</div>
+                    <div className="text-sm text-[#111827] font-medium">{pickupStr}</div>
                   </div>
                 </div>
                 <div className="flex gap-4">
                   <div className="w-2 h-2 rounded bg-red-400 mt-1.5 flex-shrink-0"></div>
                   <div>
                     <div className="text-[10px] text-[#9ca3af] uppercase font-bold">Drop-off</div>
-                    <div className="text-sm text-[#111827] font-medium">{delivery?.dropoff_location || booking.dropoff_location}</div>
+                    <div className="text-sm text-[#111827] font-medium">{dropoffStr}</div>
                   </div>
                 </div>
               </div>

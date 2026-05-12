@@ -5,13 +5,38 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { calculateFee, formatCurrency } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
+import Map from '@/components/Map';
+
+function calculateDistanceKM(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+  return R * c; 
+}
 
 export default function BookDeliveryPage() {
   const [pickup, setPickup] = useState('');
   const [dropoff, setDropoff] = useState('');
+  const [pickupCoords, setPickupCoords] = useState<[number, number] | null>(null);
+  const [dropoffCoords, setDropoffCoords] = useState<[number, number] | null>(null);
+
   const { user, loading, setBooking } = useApp();
   const router = useRouter();
-  const fee = pickup && dropoff ? calculateFee(pickup, dropoff) : 0;
+
+  let fee = 0;
+  let distanceStr = '';
+  if (pickupCoords && dropoffCoords) {
+    const distanceKm = calculateDistanceKM(pickupCoords[0], pickupCoords[1], dropoffCoords[0], dropoffCoords[1]);
+    distanceStr = `(${distanceKm.toFixed(1)} km)`;
+    fee = 49 + Math.max(0, distanceKm - 1) * 15; // 49 base + 15 per km after 1st km
+  } else if (pickup && dropoff) {
+    fee = calculateFee(pickup, dropoff);
+  }
 
   useEffect(() => {
     if (loading) return;
@@ -21,6 +46,22 @@ export default function BookDeliveryPage() {
       router.push('/driver');
     }
   }, [user, router, loading]);
+
+  const handleMapClick = (lat: number, lng: number) => {
+    if (!pickupCoords) {
+      setPickupCoords([lat, lng]);
+      setPickup(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+    } else if (!dropoffCoords) {
+      setDropoffCoords([lat, lng]);
+      setDropoff(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+    } else {
+      // Reset if both exist and user clicks again
+      setPickupCoords([lat, lng]);
+      setPickup(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+      setDropoffCoords(null);
+      setDropoff('');
+    }
+  };
 
   const handleConfirm = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,17 +87,18 @@ export default function BookDeliveryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937]">
+    <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937] flex flex-col">
       <Navbar />
 
-      <main className="flex-1 w-full max-w-4xl mx-auto p-6 md:p-10">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
-          <div className="md:col-span-3 space-y-8">
-            <header>
-              <h1 className="text-3xl font-extrabold text-[#111827] mb-2">Create New Delivery</h1>
-              <p className="text-[#6b7280]">Enter details to get an instant quote.</p>
-            </header>
+      <main className="flex-1 w-full max-w-7xl mx-auto p-6 md:p-10 flex flex-col">
+        <header className="mb-6">
+          <h1 className="text-3xl font-extrabold text-[#111827] mb-2">Create New Delivery</h1>
+          <p className="text-[#6b7280]">Tap on the map to set your pickup and drop-off points, or enter them manually.</p>
+        </header>
 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
+          {/* Left Column: Form & Price Summary */}
+          <div className="space-y-6 flex flex-col">
             <form onSubmit={handleConfirm} className="rounded-xl border border-[#e5e7eb] bg-white p-8 space-y-6 shadow-sm">
               <div className="space-y-4">
                 <div>
@@ -68,7 +110,10 @@ export default function BookDeliveryPage() {
                     placeholder="Where are we picking up from?"
                     className="grab-input"
                     value={pickup}
-                    onChange={(e) => setPickup(e.target.value)}
+                    onChange={(e) => {
+                      setPickup(e.target.value);
+                      if (pickupCoords) setPickupCoords(null); // Clear coords if user types manually
+                    }}
                     required
                   />
                 </div>
@@ -86,30 +131,17 @@ export default function BookDeliveryPage() {
                     placeholder="Where are we heading?"
                     className="grab-input"
                     value={dropoff}
-                    onChange={(e) => setDropoff(e.target.value)}
+                    onChange={(e) => {
+                      setDropoff(e.target.value);
+                      if (dropoffCoords) setDropoffCoords(null); // Clear coords if user types manually
+                    }}
                     required
                   />
                 </div>
               </div>
-
-              <div className="pt-4">
-                <button 
-                  type="submit" 
-                  disabled={!pickup || !dropoff}
-                  className={`w-full font-bold py-4 rounded-xl transition-all shadow-lg grab-glow ${
-                    pickup && dropoff 
-                      ? 'bg-[#00B14F] hover:bg-[#009940] text-white shadow-[#00B14F]/20' 
-                      : 'bg-[#e5e7eb] text-[#9ca3af] cursor-not-allowed shadow-none'
-                  }`}
-                >
-                  Confirm Booking
-                </button>
-              </div>
             </form>
-          </div>
 
-          <div className="md:col-span-2 space-y-6">
-            <div className="rounded-xl border border-[#e5e7eb] bg-white p-8 sticky top-24 shadow-sm">
+            <div className="rounded-xl border border-[#e5e7eb] bg-white p-8 shadow-sm">
               <h3 className="text-lg font-bold text-[#111827] mb-6">Price Summary</h3>
               
               <div className="space-y-4 border-b border-[#e5e7eb] pb-6 mb-6 text-sm">
@@ -118,7 +150,7 @@ export default function BookDeliveryPage() {
                   <span className="text-[#111827]">₱49.00</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#6b7280]">Distance Fee</span>
+                  <span className="text-[#6b7280]">Distance Fee {distanceStr}</span>
                   <span className="text-[#111827]">{fee > 0 ? formatCurrency(fee - 49) : '₱0.00'}</span>
                 </div>
                 <div className="flex justify-between">
@@ -132,9 +164,42 @@ export default function BookDeliveryPage() {
                 <span className="text-3xl font-black text-[#00B14F]">{formatCurrency(fee)}</span>
               </div>
               
-              <p className="text-[#9ca3af] text-[10px] uppercase tracking-wider text-center">
+              <p className="text-[#9ca3af] text-[10px] uppercase tracking-wider text-center mb-6">
                 Prices may vary during peak hours
               </p>
+
+              <button 
+                onClick={handleConfirm}
+                disabled={!pickup || !dropoff}
+                className={`w-full font-bold py-4 rounded-xl transition-all shadow-lg grab-glow ${
+                  pickup && dropoff 
+                    ? 'bg-[#00B14F] hover:bg-[#009940] text-white shadow-[#00B14F]/20' 
+                    : 'bg-[#e5e7eb] text-[#9ca3af] cursor-not-allowed shadow-none'
+                }`}
+              >
+                Confirm Booking
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column: Interactive Map */}
+          <div className="min-h-[400px] lg:min-h-full rounded-xl border border-[#e5e7eb] bg-white shadow-sm overflow-hidden flex flex-col relative z-0">
+            <div className="p-4 border-b border-[#e5e7eb] bg-gray-50 flex justify-between items-center z-10">
+              <span className="text-sm font-bold text-[#111827]">Interactive Map</span>
+              <button 
+                onClick={() => { setPickupCoords(null); setDropoffCoords(null); setPickup(''); setDropoff(''); }}
+                className="text-xs font-semibold text-red-500 hover:text-red-700"
+              >
+                Clear Map
+              </button>
+            </div>
+            <div className="flex-1 w-full h-full relative z-0">
+               <Map 
+                pickup={pickupCoords} 
+                dropoff={dropoffCoords} 
+                onMapClick={handleMapClick} 
+                interactive={true} 
+              />
             </div>
           </div>
         </div>
