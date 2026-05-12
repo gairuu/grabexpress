@@ -206,7 +206,10 @@ export default function AuthPage() {
           </div>
 
           <button
-            onClick={signInWithGoogle}
+            onClick={() => {
+              localStorage.setItem('grab_signup_role', role);
+              signInWithGoogle();
+            }}
             className="w-full flex items-center justify-center gap-3 bg-white border-2 border-[#e5e7eb] py-3.5 rounded-xl font-bold text-sm text-[#111827] hover:border-[#00B14F] hover:bg-[#f0fdf4] transition-all active:scale-[0.98]"
           >
             <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">

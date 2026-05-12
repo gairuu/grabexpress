@@ -102,6 +102,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
               const name = newUser.user.user_metadata.full_name || newUser.user.email?.split('@')[0] || 'User';
               const email = newUser.user.email || '';
               
+              // Check if a role was saved in localStorage during signup
+              const savedRole = localStorage.getItem('grab_signup_role') as AppUser['role'] || 'customer';
+              
               // Create the profile
               const { error: insertError } = await supabase
                 .from('profiles')
@@ -109,11 +112,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
                   id: newUser.user.id,
                   name,
                   email,
-                  role: 'customer' // Default role for Google users
+                  role: savedRole
                 });
                 
               if (!insertError) {
+                // If it's a driver, create the driver record too
+                if (savedRole === 'driver') {
+                  await supabase.from('drivers').insert({
+                    id: newUser.user.id,
+                    vehicle_type: 'Motorcycle',
+                    plate_number: 'TBD',
+                    rating: 5.0,
+                    status: 'available'
+                  });
+                }
                 profile = await fetchProfile(newUser.user.id);
+                localStorage.removeItem('grab_signup_role'); // Clean up
               }
             }
           }
