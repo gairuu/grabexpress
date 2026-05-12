@@ -238,10 +238,46 @@ export default function BookDeliveryPage() {
           />
         )}
 
+  const handleConfirm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pickup || !dropoff) return;
+
+    setBooking({
+      pickup_location: pickup,
+      dropoff_location: dropoff,
+      delivery_fee: fee,
+      delivery_status: 'pending'
+    });
+    
+    router.push('/book/details');
+  };
+
+  if (loading) {
+    return <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center"><div className="text-[#6b7280]">Loading...</div></div>;
+  }
+
+  if (!user || user.role === 'driver') {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937] flex flex-col">
+      <Navbar />
+
+      <main className="flex-1 w-full max-w-7xl mx-auto p-6 md:p-10 flex flex-col relative">
+        {/* Invisible overlay to close suggestions when clicking outside */}
+        {activeInput && (
+          <div 
+            className="fixed inset-0 z-10" 
+            onClick={() => setActiveInput(null)} 
+          />
+        )}
+
         <header className="mb-6 relative z-20">
           <h1 className="text-3xl font-extrabold text-[#111827] mb-2">Create New Delivery</h1>
           <p className="text-[#6b7280]">Tap on the map to set your pickup and drop-off points, or enter them manually.</p>
         </header>
+
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 relative z-20">
           {/* Left Column: Form & Price Summary */}

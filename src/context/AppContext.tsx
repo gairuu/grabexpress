@@ -454,46 +454,68 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchDeliveries]);
 
   const bookAndMatch = useCallback(async (deliveryData: Omit<Delivery, 'id'>) => {
-    try {
-      console.log('[bookAndMatch] Broadcasting delivery request...');
-      
-      const { data: delivery, error: deliveryError } = await supabase
-        .from('deliveries')
-        .insert({
-          customer_id: deliveryData.customer_id,
-          customer_name: deliveryData.customer_name,
-          pickup_location: deliveryData.pickup_location,
-          dropoff_location: deliveryData.dropoff_location,
-          delivery_status: 'pending',
-          broadcast_status: 'searching',
-          delivery_fee: deliveryData.delivery_fee,
-          payment_method: deliveryData.payment_method,
-          item_size: deliveryData.item_size,
-          item_weight: deliveryData.item_weight,
-          item_type: deliveryData.item_type,
-          vehicle_type: deliveryData.vehicle_type,
-          sender_name: deliveryData.sender_name,
-          sender_phone: deliveryData.sender_phone,
-          recipient_name: deliveryData.recipient_name,
-          recipient_phone: deliveryData.recipient_phone
-        })
-        .select('id')
-        .single();
+    let timeoutId: NodeJS.Timeout | undefined;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('Matching timed out. Please try again.')), 15000);
+    });
 
-      if (deliveryError) throw new Error(`Booking failed: ${deliveryError.message}`);
+    const bookingFlow = (async () => {
+      try {
+        console.log('[bookAndMatch] Step 1: Finding available driver...');
+        const { data: driver, error: driverError } = await supabase
+          .from('drivers')
+          .select('*')
+          .eq('status', 'available')
+          .limit(1)
+          .maybeSingle();
 
-      setBookingState(prev => ({
-        ...prev,
-        id: delivery.id,
-        delivery_status: 'pending'
-      }));
+        if (driverError) throw new Error(`Driver search failed: ${driverError.message}`);
+        if (!driver) throw new Error("No available drivers found. Please try again in a moment.");
 
-      return delivery.id;
-    } catch (err: any) {
-      console.error('[bookAndMatch] Error:', err.message);
-      throw err;
-    }
-  }, []);
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name, contact_number')
+          .eq('id', driver.id)
+          .maybeSingle();
+
+        const { data: delivery, error: deliveryError } = await supabase
+          .from('deliveries')
+          .insert({
+            customer_id: deliveryData.customer_id,
+            customer_name: deliveryData.customer_name,
+            driver_id: driver.id,
+            driver_name: profile?.name || 'Driver',
+            pickup_location: deliveryData.pickup_location,
+            dropoff_location: deliveryData.dropoff_location,
+            delivery_status: 'pending',
+            delivery_fee: deliveryData.delivery_fee,
+            payment_method: deliveryData.payment_method,
+            item_size: deliveryData.item_size,
+            item_weight: deliveryData.item_weight,
+            item_type: deliveryData.item_type,
+            vehicle_type: deliveryData.vehicle_type,
+            sender_name: deliveryData.sender_name,
+            sender_phone: deliveryData.sender_phone,
+            recipient_name: deliveryData.recipient_name,
+            recipient_phone: deliveryData.recipient_phone,
+            booking_time: new Date().toISOString()
+          })
+          .select('id')
+          .single();
+
+        if (deliveryError) throw new Error(`Booking failed: ${deliveryError.message}`);
+
+        await supabase.from('drivers').update({ status: 'busy' }).eq('id', driver.id);
+
+        fetchDeliveries();
+        return delivery.id;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    })();
+
+    return await Promise.race([bookingFlow, timeoutPromise]) as string;
+  }, [fetchDeliveries]);
 
   const findAvailableDriver = useCallback(async () => {
     // Safety timeout for the search
