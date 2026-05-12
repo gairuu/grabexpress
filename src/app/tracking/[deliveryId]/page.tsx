@@ -367,7 +367,7 @@ export default function TrackingByIdPage() {
         {delivery && (
           <ChatBox 
             deliveryId={delivery.id} 
-            recipientName={delivery.recipient_name || delivery.customer_name} 
+            recipientName={delivery.driver_name} 
           />
         )}
       </main>

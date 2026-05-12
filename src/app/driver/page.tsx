@@ -245,12 +245,10 @@ export default function DriverDashboardPage() {
           </div>
         </section>
         {selectedDelivery && (
-          <div className="mt-6">
-            <ChatBox 
-              deliveryId={selectedDelivery.id} 
-              recipientName={selectedDelivery.customer_name} 
-            />
-          </div>
+          <ChatBox 
+            deliveryId={selectedDelivery.id} 
+            recipientName={selectedDelivery.customer_name} 
+          />
         )}
       </main>
     </div>
