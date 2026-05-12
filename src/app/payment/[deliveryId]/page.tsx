@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import PaymentMethodCard from '@/components/PaymentMethodCard';
 import SuccessModal from '@/components/SuccessModal';
+import RatingModal from '@/components/RatingModal';
 import { PaymentMethod } from '@/lib/types';
 
 import { Delivery } from '@/lib/types';
@@ -20,6 +21,7 @@ export default function PaymentByIdPage() {
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [isPaid, setIsPaid] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showRating, setShowRating] = useState(false);
   const [error, setError] = useState('');
    const [fetching, setFetching] = useState(true);
    const [fetchTimeoutTriggered, setFetchTimeoutTriggered] = useState(false);
@@ -222,10 +224,19 @@ export default function PaymentByIdPage() {
         </div>
       </main>
 
-      {isPaid && (
+      {isPaid && !showRating && (
         <SuccessModal
           amount={formatCurrency(delivery.delivery_fee)}
           method={methodLabels[method]}
+          onClose={() => setShowRating(true)}
+        />
+      )}
+
+      {showRating && (
+        <RatingModal
+          deliveryId={delivery.id}
+          driverId={delivery.driver_id}
+          driverName={delivery.driver_name}
           onClose={() => {
             resetBooking();
             router.push('/dashboard');

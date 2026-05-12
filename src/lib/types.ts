@@ -55,6 +55,8 @@ export interface Delivery {
   item_weight?: number;
   item_type?: string;
   vehicle_type?: VehicleType;
+  driver_rating?: number;
+  customer_review?: string;
 }
 
 export interface BookingState {
@@ -73,6 +75,8 @@ export interface BookingState {
   item_weight: number;
   item_type: string;
   vehicle_type: VehicleType;
+  driver_rating?: number;
+  customer_review?: string;
 }
 
 export interface AppUser {
