@@ -4,9 +4,10 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import StatusBadge from '@/components/StatusBadge';
 import ChatBox from '@/components/ChatBox';
+import IncomingJobModal from '@/components/IncomingJobModal';
 import { useApp } from '@/context/AppContext';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Clock, Truck, CheckCircle2, Package } from 'lucide-react';
+import { Clock, Truck, CheckCircle2, Package, MessageCircle } from 'lucide-react';
 import StatsCard from '@/components/StatsCard';
 import { supabase } from '@/lib/supabase';
 
