@@ -183,6 +183,8 @@ export default function BookDeliveryPage() {
     if (!pickup || !dropoff || !user) return;
 
     try {
+      const { bookAndMatch } = useApp(); // Correct way to get the function
+      
       const deliveryData = {
         customer_id: user.id,
         customer_name: user.name,
@@ -192,26 +194,19 @@ export default function BookDeliveryPage() {
         delivery_fee: fee,
         payment_method: 'cash' as const,
         vehicle_type: 'Motorcycle' as const,
-        booking_time: new Date().toISOString()
+        booking_time: new Date().toISOString(),
+        sender_name: '', // Optional placeholders for now
+        sender_phone: '',
+        recipient_name: '',
+        recipient_phone: '',
+        item_size: 'S' as const,
+        item_weight: 1,
+        item_type: 'Documents'
       };
 
-      const { bookAndMatch } = useApp(); // Get the function from context
-      // Note: In the real app, we'd go to /book/details first. 
-      // For this test, let's trigger the broadcast immediately.
-      
-      const { supabase } = await import('@/lib/supabase');
-      const { data: delivery, error: bookError } = await supabase
-        .from('deliveries')
-        .insert({
-          ...deliveryData,
-          broadcast_status: 'searching'
-        })
-        .select('id')
-        .single();
+      const deliveryId = await bookAndMatch(deliveryData);
 
-      if (bookError) throw bookError;
-
-      setCurrentDeliveryId(delivery.id);
+      setCurrentDeliveryId(deliveryId);
       setIsSearching(true);
       setSearchTimer(30);
     } catch (err: any) {
