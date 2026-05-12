@@ -18,6 +18,7 @@ export default function DriverDashboardPage() {
   const [driverStatus, setDriverStatus] = useState<'available' | 'busy' | 'offline'>('offline');
   const [statusLoading, setStatusLoading] = useState(false);
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null);
+  const [incomingJob, setIncomingJob] = useState<any>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -61,6 +62,52 @@ export default function DriverDashboardPage() {
       setSelectedDeliveryId(activeJob.id);
     }
   }, [deliveries, user, selectedDeliveryId, loading]);
+
+  useEffect(() => {
+    if (!user || driverStatus !== 'available') return;
+
+    // Listen for NEW searching deliveries for this driver's vehicle type
+    const channel = supabase
+      .channel('searching-jobs')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'deliveries',
+        filter: 'broadcast_status=eq.searching'
+      }, (payload) => {
+        // Only show if it matches driver's vehicle type (simple check)
+        setIncomingJob(payload.new);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, driverStatus]);
+
+  const handleAcceptJob = async () => {
+    if (!incomingJob || !user) return;
+    
+    try {
+      // Optimistically update delivery
+      const { error } = await supabase
+        .from('deliveries')
+        .update({ 
+          driver_id: user.id, 
+          driver_name: user.name,
+          broadcast_status: 'matched' 
+        })
+        .eq('id', incomingJob.id)
+        .eq('broadcast_status', 'searching'); // Safety check to prevent double matching
+
+      if (error) throw error;
+
+      setIncomingJob(null);
+      await fetchDeliveries();
+    } catch (err) {
+      console.error('Failed to accept job:', err);
+      alert('This job was already taken by another driver.');
+      setIncomingJob(null);
+    }
+  };
 
   const toggleAvailability = async () => {
     if (!user) return;
@@ -264,6 +311,14 @@ export default function DriverDashboardPage() {
           <ChatBox 
             deliveryId={selectedDelivery.id} 
             recipientName={selectedDelivery.customer_name} 
+          />
+        )}
+
+        {incomingJob && (
+          <IncomingJobModal 
+            delivery={incomingJob}
+            onAccept={handleAcceptJob}
+            onReject={() => setIncomingJob(null)}
           />
         )}
       </main>

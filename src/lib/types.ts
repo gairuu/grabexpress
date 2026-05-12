@@ -57,6 +57,7 @@ export interface Delivery {
   vehicle_type?: VehicleType;
   driver_rating?: number;
   customer_review?: string;
+  broadcast_status?: 'searching' | 'matched' | 'timeout' | 'none';
 }
 
 export interface BookingState {

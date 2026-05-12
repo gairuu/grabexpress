@@ -320,6 +320,32 @@ export default function BookDeliveryPage() {
           </div>
         </div>
       </main>
+
+      {isSearching && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="glass-card p-10 max-w-sm w-full text-center slide-up">
+            <div className="relative w-24 h-24 mx-auto mb-8">
+              <div className="absolute inset-0 border-4 border-[var(--grab-green)]/20 rounded-full"></div>
+              <div 
+                className="absolute inset-0 border-4 border-[var(--grab-green)] rounded-full border-t-transparent animate-spin"
+                style={{ animationDuration: '1s' }}
+              ></div>
+              <div className="absolute inset-0 flex items-center justify-center font-black text-2xl text-white">
+                {searchTimer}
+              </div>
+            </div>
+            <h2 className="text-2xl font-black text-white mb-2">Finding Driver...</h2>
+            <p className="text-white/60 text-sm">Broadcasting your request to nearby available drivers.</p>
+            
+            <button 
+              onClick={() => setIsSearching(false)}
+              className="mt-8 text-white/40 hover:text-white/60 text-xs font-bold uppercase tracking-widest transition-colors"
+            >
+              Cancel Request
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

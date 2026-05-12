@@ -454,126 +454,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchDeliveries]);
 
   const bookAndMatch = useCallback(async (deliveryData: Omit<Delivery, 'id'>) => {
-    let timeoutId: NodeJS.Timeout | undefined;
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutId = setTimeout(() => reject(new Error('Matching timed out. Please try again.')), 15000);
-    });
-
-    const bookingFlow = (async () => {
-      try {
-        console.log('[bookAndMatch] Step 1: Finding available driver...');
-        // 1. Find available driver (Simple select first to avoid join hang)
-        const { data: driver, error: driverError } = await supabase
-          .from('drivers')
-          .select('*')
-          .eq('status', 'available')
-          .limit(1)
-          .maybeSingle();
-
-        console.log('[bookAndMatch] Step 1 Complete. Driver found:', driver?.id, '| Error:', driverError?.message);
-
-        if (driverError) throw new Error(`Driver search failed: ${driverError.message}`);
-        if (!driver) throw new Error("No available drivers found. Please try again in a moment.");
-
-        console.log('[bookAndMatch] Step 2: Fetching driver profile...');
-        // 1.5 Fetch profile separately
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('name, contact_number')
-          .eq('id', driver.id)
-          .maybeSingle();
-        console.log('[bookAndMatch] Step 2 Complete.');
-
-        console.log('[bookAndMatch] Step 3: Creating delivery record...');
-        // 2. Create delivery with that driver
-        const { data: delivery, error: deliveryError } = await supabase
-          .from('deliveries')
-          .insert({
-            customer_id: deliveryData.customer_id,
-            customer_name: deliveryData.customer_name,
-            driver_id: driver.id,
-            driver_name: profile?.name || 'Driver',
-            pickup_location: deliveryData.pickup_location,
-            dropoff_location: deliveryData.dropoff_location,
-            delivery_status: 'pending',
-            delivery_fee: deliveryData.delivery_fee,
-            payment_method: deliveryData.payment_method,
-            item_size: deliveryData.item_size,
-            item_weight: deliveryData.item_weight,
-            item_type: deliveryData.item_type,
-            vehicle_type: deliveryData.vehicle_type,
-            sender_name: deliveryData.sender_name,
-            sender_phone: deliveryData.sender_phone,
-            recipient_name: deliveryData.recipient_name,
-            recipient_phone: deliveryData.recipient_phone
-          })
-          .select('id')
-          .single();
-
-        console.log('[bookAndMatch] Step 3 Complete. Delivery ID:', delivery?.id, '| Error:', deliveryError?.message);
-
-        if (deliveryError) throw new Error(`Booking failed: ${deliveryError.message}`);
-
-        console.log('[bookAndMatch] Step 4: Updating driver status to busy...');
-        // 3. Mark driver busy
-        await supabase.from('drivers').update({ status: 'busy' }).eq('id', driver.id);
-        console.log('[bookAndMatch] Step 4 Complete.');
-
-        // 4. Update local booking state for the UI
-        const mappedDriver = {
-          id: driver.id,
-          name: profile?.name || 'Driver',
-          avatar: (profile?.name || 'DR').slice(0, 2).toUpperCase(),
-          vehicle: driver.vehicle_type,
-          plate_number: driver.plate_number,
-          rating: driver.rating,
-          totalDeliveries: 0,
-          status: 'busy' as const,
-          contact_number: profile?.contact_number || '',
-        };
-
-        const newDelivery: Delivery = {
-          id: delivery.id,
+    try {
+      console.log('[bookAndMatch] Broadcasting delivery request...');
+      
+      const { data: delivery, error: deliveryError } = await supabase
+        .from('deliveries')
+        .insert({
           customer_id: deliveryData.customer_id,
           customer_name: deliveryData.customer_name,
-          driver_id: driver.id,
-          driver_name: profile?.name || 'Driver',
           pickup_location: deliveryData.pickup_location,
           dropoff_location: deliveryData.dropoff_location,
           delivery_status: 'pending',
+          broadcast_status: 'searching',
           delivery_fee: deliveryData.delivery_fee,
           payment_method: deliveryData.payment_method,
-          estimated_time: '25-35 mins',
-          booking_time: new Date().toISOString(),
-          sender_name: deliveryData.sender_name,
-          sender_phone: deliveryData.sender_phone,
-          recipient_name: deliveryData.recipient_name,
-          recipient_phone: deliveryData.recipient_phone,
           item_size: deliveryData.item_size,
           item_weight: deliveryData.item_weight,
           item_type: deliveryData.item_type,
           vehicle_type: deliveryData.vehicle_type,
-        };
+          sender_name: deliveryData.sender_name,
+          sender_phone: deliveryData.sender_phone,
+          recipient_name: deliveryData.recipient_name,
+          recipient_phone: deliveryData.recipient_phone
+        })
+        .select('id')
+        .single();
 
-        setBookingState(prev => ({
-          ...prev,
-          id: delivery.id,
-          driver: mappedDriver
-        }));
+      if (deliveryError) throw new Error(`Booking failed: ${deliveryError.message}`);
 
-        // Optimistically add to deliveries list so tracking page sees it immediately
-        setDeliveries(prev => [newDelivery, ...prev]);
+      setBookingState(prev => ({
+        ...prev,
+        id: delivery.id,
+        delivery_status: 'pending'
+      }));
 
-        // Fire fetchDeliveries in background — don't await it, it blocks the return
-        fetchDeliveries();
-        return delivery.id;
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    })();
-
-    return await Promise.race([bookingFlow, timeoutPromise]) as string;
-  }, [fetchDeliveries]);
+      return delivery.id;
+    } catch (err: any) {
+      console.error('[bookAndMatch] Error:', err.message);
+      throw err;
+    }
+  }, []);
 
   const findAvailableDriver = useCallback(async () => {
     // Safety timeout for the search
