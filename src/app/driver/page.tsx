@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import StatusBadge from '@/components/StatusBadge';
+import ChatBox from '@/components/ChatBox';
 import { useApp } from '@/context/AppContext';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Clock, Truck, CheckCircle2, Package } from 'lucide-react';
@@ -16,6 +17,7 @@ export default function DriverDashboardPage() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [driverStatus, setDriverStatus] = useState<'available' | 'busy' | 'offline'>('offline');
   const [statusLoading, setStatusLoading] = useState(false);
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -121,6 +123,7 @@ export default function DriverDashboardPage() {
   };
 
   const myJobs = deliveries.filter(job => job.driver_id === user?.id && (job.delivery_status === 'pending' || job.delivery_status === 'in_transit'));
+  const selectedDelivery = myJobs.find(j => j.id === selectedDeliveryId);
 
   return (
     <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937]">
@@ -182,7 +185,7 @@ export default function DriverDashboardPage() {
               </div>
             ) : (
               myJobs.map((job) => (
-                <div key={job.id} className="px-5 py-4">
+                <div key={job.id} className={`px-5 py-4 cursor-pointer hover:bg-gray-50 ${selectedDeliveryId === job.id ? 'bg-blue-50' : ''}`} onClick={() => setSelectedDeliveryId(job.id)}>
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="mb-1 flex items-center gap-3">
@@ -203,14 +206,14 @@ export default function DriverDashboardPage() {
                           <button
                             className="rounded-md bg-[#00B14F] px-3 py-2 text-xs font-semibold text-white hover:bg-[#009940] disabled:opacity-60"
                             disabled={loadingId === job.id}
-                            onClick={() => handleStatusUpdate(job.id, 'in_transit')}
+                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(job.id, 'in_transit'); }}
                           >
                             {loadingId === job.id ? 'Updating...' : 'Start Delivery'}
                           </button>
                           <button
                             className="rounded-md border border-[#e5e7eb] px-3 py-2 text-xs font-semibold text-[#6b7280] hover:bg-gray-50 disabled:opacity-60"
                             disabled={loadingId === job.id}
-                            onClick={() => handleStatusUpdate(job.id, 'cancelled')}
+                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(job.id, 'cancelled'); }}
                           >
                             Cancel
                           </button>
@@ -221,14 +224,14 @@ export default function DriverDashboardPage() {
                           <button
                             className="rounded-md bg-[var(--grab-green)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--grab-green-dark)] disabled:opacity-60"
                             disabled={loadingId === job.id}
-                            onClick={() => handleStatusUpdate(job.id, 'delivered')}
+                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(job.id, 'delivered'); }}
                           >
                             {loadingId === job.id ? 'Updating...' : 'Mark Delivered'}
                           </button>
                           <button
                             className="rounded-md border border-[#e5e7eb] px-3 py-2 text-xs font-semibold text-[#6b7280] hover:bg-gray-50 disabled:opacity-60"
                             disabled={loadingId === job.id}
-                            onClick={() => handleStatusUpdate(job.id, 'cancelled')}
+                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(job.id, 'cancelled'); }}
                           >
                             Cancel
                           </button>
@@ -241,6 +244,14 @@ export default function DriverDashboardPage() {
             )}
           </div>
         </section>
+        {selectedDelivery && (
+          <div className="mt-6">
+            <ChatBox 
+              deliveryId={selectedDelivery.id} 
+              recipientName={selectedDelivery.customer_name} 
+            />
+          </div>
+        )}
       </main>
     </div>
   );

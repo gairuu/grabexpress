@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import DriverCard from '@/components/DriverCard';
 import StatusTimeline from '@/components/StatusTimeline';
 import Map from '@/components/Map';
+import ChatBox from '@/components/ChatBox';
 import { DeliveryStatus, Delivery } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 
@@ -362,6 +363,13 @@ export default function TrackingByIdPage() {
             )}
           </div>
         </div>
+
+        {delivery && (
+          <ChatBox 
+            deliveryId={delivery.id} 
+            recipientName={delivery.recipient_name || delivery.customer_name} 
+          />
+        )}
       </main>
     </div>
   );
