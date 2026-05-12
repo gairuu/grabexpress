@@ -52,6 +52,16 @@ export default function DriverDashboardPage() {
     };
   }, [user]);
 
+  useEffect(() => {
+    if (loading || !user || deliveries.length === 0) return;
+    
+    // Auto-select the first active job if none is selected
+    const activeJob = deliveries.find(d => d.driver_id === user.id && (d.delivery_status === 'pending' || d.delivery_status === 'in_transit'));
+    if (activeJob && !selectedDeliveryId) {
+      setSelectedDeliveryId(activeJob.id);
+    }
+  }, [deliveries, user, selectedDeliveryId, loading]);
+
   const toggleAvailability = async () => {
     if (!user) return;
     setStatusLoading(true);
@@ -185,22 +195,34 @@ export default function DriverDashboardPage() {
               </div>
             ) : (
               myJobs.map((job) => (
-                <div key={job.id} className={`px-5 py-4 cursor-pointer hover:bg-gray-50 ${selectedDeliveryId === job.id ? 'bg-blue-50' : ''}`} onClick={() => setSelectedDeliveryId(job.id)}>
+                <div 
+                  key={job.id} 
+                  className={`px-5 py-4 cursor-pointer transition-all border-l-4 ${
+                    selectedDeliveryId === job.id ? 'bg-green-50 border-[var(--grab-green)]' : 'hover:bg-gray-50 border-transparent'
+                  }`} 
+                  onClick={() => setSelectedDeliveryId(job.id)}
+                >
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
+                    <div className="flex-1">
                       <div className="mb-1 flex items-center gap-3">
-                        <span className="font-mono text-xs text-[#9ca3af]">#{job.id.slice(0, 8).toUpperCase()}</span>
+                        <span className="font-mono text-[10px] text-[#9ca3af]">#{job.id.slice(0, 8).toUpperCase()}</span>
                         <StatusBadge status={job.delivery_status} size="sm" />
                       </div>
-                      <div className="text-sm font-medium text-[#111827]">
-                        {job.pickup_location} &rarr; {job.dropoff_location}
+                      <div className="text-sm font-bold text-[#111827] line-clamp-1">
+                        {job.pickup_location.split(',')[0]} &rarr; {job.dropoff_location.split(',')[0]}
                       </div>
-                      <div className="mt-1 text-xs text-[#6b7280]">
-                        Customer: {job.customer_name} · {formatDate(job.booking_time)} · {formatCurrency(job.delivery_fee)}
+                      <div className="mt-1 text-[11px] text-[#6b7280]">
+                        <span className="font-semibold text-gray-700">Customer:</span> {job.customer_name} · {formatDate(job.booking_time)}
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className={`p-2 rounded-lg border transition-colors ${selectedDeliveryId === job.id ? 'bg-[var(--grab-green)] text-white border-[var(--grab-green)]' : 'bg-white text-gray-300 border-gray-100'}`}
+                      >
+                        <Package size={16} />
+                      </div>
+
                       {job.delivery_status === 'pending' && (
                         <>
                           <button
@@ -209,13 +231,6 @@ export default function DriverDashboardPage() {
                             onClick={(e) => { e.stopPropagation(); handleStatusUpdate(job.id, 'in_transit'); }}
                           >
                             {loadingId === job.id ? 'Updating...' : 'Start Delivery'}
-                          </button>
-                          <button
-                            className="rounded-md border border-[#e5e7eb] px-3 py-2 text-xs font-semibold text-[#6b7280] hover:bg-gray-50 disabled:opacity-60"
-                            disabled={loadingId === job.id}
-                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(job.id, 'cancelled'); }}
-                          >
-                            Cancel
                           </button>
                         </>
                       )}
@@ -228,15 +243,16 @@ export default function DriverDashboardPage() {
                           >
                             {loadingId === job.id ? 'Updating...' : 'Mark Delivered'}
                           </button>
-                          <button
-                            className="rounded-md border border-[#e5e7eb] px-3 py-2 text-xs font-semibold text-[#6b7280] hover:bg-gray-50 disabled:opacity-60"
-                            disabled={loadingId === job.id}
-                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(job.id, 'cancelled'); }}
-                          >
-                            Cancel
-                          </button>
                         </>
                       )}
+                      
+                      <button
+                        className="rounded-md border border-[#e5e7eb] px-3 py-2 text-xs font-semibold text-[#6b7280] hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors disabled:opacity-60"
+                        disabled={loadingId === job.id}
+                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate(job.id, 'cancelled'); }}
+                      >
+                        Cancel
+                      </button>
                     </div>
                   </div>
                 </div>
