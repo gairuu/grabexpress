@@ -47,17 +47,37 @@ export default function BookDeliveryPage() {
     }
   }, [user, router, loading]);
 
-  const handleMapClick = (lat: number, lng: number) => {
+  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+      const data = await res.json();
+      if (data && data.display_name) {
+        const parts = data.display_name.split(',');
+        return parts.slice(0, 3).join(',').trim() + ` (Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)})`; 
+      }
+    } catch (e) {
+      console.warn('Reverse geocoding failed', e);
+    }
+    return `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+  };
+
+  const handleMapClick = async (lat: number, lng: number) => {
     if (!pickupCoords) {
       setPickupCoords([lat, lng]);
-      setPickup(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+      setPickup('Locating...');
+      const address = await reverseGeocode(lat, lng);
+      setPickup(address);
     } else if (!dropoffCoords) {
       setDropoffCoords([lat, lng]);
-      setDropoff(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+      setDropoff('Locating...');
+      const address = await reverseGeocode(lat, lng);
+      setDropoff(address);
     } else {
       // Reset if both exist and user clicks again
       setPickupCoords([lat, lng]);
-      setPickup(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+      setPickup('Locating...');
+      const address = await reverseGeocode(lat, lng);
+      setPickup(address);
       setDropoffCoords(null);
       setDropoff('');
     }
