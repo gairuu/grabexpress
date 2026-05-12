@@ -31,6 +31,10 @@ export default function BookDeliveryPage() {
   const [activeInput, setActiveInput] = useState<'pickup' | 'dropoff' | null>(null);
 
   const { user, loading, setBooking } = useApp();
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchTimer, setSearchTimer] = useState(30);
+  const [currentDeliveryId, setCurrentDeliveryId] = useState<string | null>(null);
+  const [error, setError] = useState('');
   const router = useRouter();
 
   let fee = 0;
@@ -117,6 +121,40 @@ export default function BookDeliveryPage() {
     }
   };
 
+  useEffect(() => {
+    if (!isSearching || !currentDeliveryId) return;
+
+    const timer = setInterval(() => {
+      setSearchTimer(t => {
+        if (t <= 1) {
+          setIsSearching(false);
+          setError('No drivers accepted your request.');
+          return 30;
+        }
+        return t - 1;
+      });
+    }, 1000);
+
+    const channel = supabase
+      .channel(`matching-${currentDeliveryId}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'deliveries',
+        filter: `id=eq.${currentDeliveryId}`
+      }, (payload) => {
+        if (payload.new.broadcast_status === 'matched') {
+          router.push(`/tracking/${currentDeliveryId}`);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      clearInterval(timer);
+      supabase.removeChannel(channel);
+    };
+  }, [isSearching, currentDeliveryId, router]);
+
   const handleMapClick = async (lat: number, lng: number) => {
     setActiveInput(null); // Close any open suggestion boxes
     if (!pickupCoords) {
@@ -139,19 +177,45 @@ export default function BookDeliveryPage() {
     }
   };
 
-  const handleConfirm = (e: React.FormEvent) => {
+  const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pickup || !dropoff) return;
+    if (!pickup || !dropoff || !user) return;
 
-    setBooking({
-      id: crypto.randomUUID(),
-      pickup_location: pickup,
-      dropoff_location: dropoff,
-      delivery_fee: fee,
-      delivery_status: 'pending'
-    });
-    
-    router.push('/book/details');
+    try {
+      const deliveryData = {
+        customer_id: user.id,
+        customer_name: user.name,
+        pickup_location: pickup,
+        dropoff_location: dropoff,
+        delivery_status: 'pending' as const,
+        delivery_fee: fee,
+        payment_method: 'cash' as const,
+        vehicle_type: 'Motorcycle' as const,
+        booking_time: new Date().toISOString()
+      };
+
+      const { bookAndMatch } = useApp(); // Get the function from context
+      // Note: In the real app, we'd go to /book/details first. 
+      // For this test, let's trigger the broadcast immediately.
+      
+      const { supabase } = await import('@/lib/supabase');
+      const { data: delivery, error: bookError } = await supabase
+        .from('deliveries')
+        .insert({
+          ...deliveryData,
+          broadcast_status: 'searching'
+        })
+        .select('id')
+        .single();
+
+      if (bookError) throw bookError;
+
+      setCurrentDeliveryId(delivery.id);
+      setIsSearching(true);
+      setSearchTimer(30);
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
   if (loading) {
