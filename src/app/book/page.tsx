@@ -6,6 +6,7 @@ import { useApp } from '@/context/AppContext';
 import { calculateFee, formatCurrency } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import Map from '@/components/Map';
+import { supabase } from '@/lib/supabase';
 
 function calculateDistanceKM(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371; // Radius of the earth in km
