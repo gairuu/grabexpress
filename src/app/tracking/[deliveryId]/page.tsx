@@ -161,6 +161,39 @@ export default function TrackingByIdPage() {
   } : booking.driver;
 
   const [progress, setProgress] = useState(0);
+  const [pickupCoords, setPickupCoords] = useState<[number, number]>([14.5995, 120.9842]);
+  const [dropoffCoords, setDropoffCoords] = useState<[number, number]>([14.6195, 120.9842]);
+  
+  const pickupStr = delivery?.pickup_location || booking.pickup_location;
+  const dropoffStr = delivery?.dropoff_location || booking.dropoff_location;
+
+  useEffect(() => {
+    const forwardGeocode = async (address: string): Promise<[number, number] | null> => {
+      if (!address || address.length < 3) return null;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        }
+      } catch (e) {
+        console.warn('Forward geocoding failed', e);
+      }
+      return null;
+    };
+
+    const loadCoords = async () => {
+      if (pickupStr) {
+        const coords = await forwardGeocode(pickupStr);
+        setPickupCoords(coords || parseOrMockCoords(pickupStr, 0));
+      }
+      if (dropoffStr) {
+        const coords = await forwardGeocode(dropoffStr);
+        setDropoffCoords(coords || parseOrMockCoords(dropoffStr, 0.02));
+      }
+    };
+    loadCoords();
+  }, [pickupStr, dropoffStr]);
   
   useEffect(() => {
     if (realStatus === 'in_transit') {
@@ -214,12 +247,6 @@ export default function TrackingByIdPage() {
     if (typeof window !== 'undefined') router.push('/auth');
     return null;
   }
-
-  const pickupStr = delivery?.pickup_location || booking.pickup_location;
-  const dropoffStr = delivery?.dropoff_location || booking.dropoff_location;
-
-  const pickupCoords = parseOrMockCoords(pickupStr, 0);
-  const dropoffCoords = parseOrMockCoords(dropoffStr, 0.02);
 
   const driverLat = pickupCoords[0] + (dropoffCoords[0] - pickupCoords[0]) * (progress / 100);
   const driverLng = pickupCoords[1] + (dropoffCoords[1] - pickupCoords[1]) * (progress / 100);

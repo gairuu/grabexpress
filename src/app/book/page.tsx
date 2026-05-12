@@ -25,6 +25,11 @@ export default function BookDeliveryPage() {
   const [pickupCoords, setPickupCoords] = useState<[number, number] | null>(null);
   const [dropoffCoords, setDropoffCoords] = useState<[number, number] | null>(null);
 
+  // Suggestion state
+  const [pickupSuggestions, setPickupSuggestions] = useState<any[]>([]);
+  const [dropoffSuggestions, setDropoffSuggestions] = useState<any[]>([]);
+  const [activeInput, setActiveInput] = useState<'pickup' | 'dropoff' | null>(null);
+
   const { user, loading, setBooking } = useApp();
   const router = useRouter();
 
@@ -53,7 +58,7 @@ export default function BookDeliveryPage() {
       const data = await res.json();
       if (data && data.display_name) {
         const parts = data.display_name.split(',');
-        return parts.slice(0, 3).join(',').trim() + ` (Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)})`; 
+        return parts.slice(0, 3).join(',').trim(); 
       }
     } catch (e) {
       console.warn('Reverse geocoding failed', e);
@@ -61,7 +66,59 @@ export default function BookDeliveryPage() {
     return `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
   };
 
+  const fetchSuggestions = async (query: string) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`);
+      return await res.json();
+    } catch {
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (!pickupCoords && pickup.length > 3 && pickup !== 'Locating...' && activeInput === 'pickup') {
+        const data = await fetchSuggestions(pickup);
+        setPickupSuggestions(data || []);
+      } else {
+        setPickupSuggestions([]);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [pickup, pickupCoords, activeInput]);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (!dropoffCoords && dropoff.length > 3 && dropoff !== 'Locating...' && activeInput === 'dropoff') {
+        const data = await fetchSuggestions(dropoff);
+        setDropoffSuggestions(data || []);
+      } else {
+        setDropoffSuggestions([]);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [dropoff, dropoffCoords, activeInput]);
+
+  const handleSuggestionClick = (type: 'pickup' | 'dropoff', suggestion: any) => {
+    const lat = parseFloat(suggestion.lat);
+    const lon = parseFloat(suggestion.lon);
+    const address = suggestion.display_name.split(',').slice(0, 3).join(',').trim();
+
+    if (type === 'pickup') {
+      setPickup(address);
+      setPickupCoords([lat, lon]);
+      setPickupSuggestions([]);
+      setActiveInput(null);
+    } else {
+      setDropoff(address);
+      setDropoffCoords([lat, lon]);
+      setDropoffSuggestions([]);
+      setActiveInput(null);
+    }
+  };
+
   const handleMapClick = async (lat: number, lng: number) => {
+    setActiveInput(null); // Close any open suggestion boxes
     if (!pickupCoords) {
       setPickupCoords([lat, lng]);
       setPickup('Locating...');
@@ -73,7 +130,6 @@ export default function BookDeliveryPage() {
       const address = await reverseGeocode(lat, lng);
       setDropoff(address);
     } else {
-      // Reset if both exist and user clicks again
       setPickupCoords([lat, lng]);
       setPickup('Locating...');
       const address = await reverseGeocode(lat, lng);
@@ -110,53 +166,93 @@ export default function BookDeliveryPage() {
     <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937] flex flex-col">
       <Navbar />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto p-6 md:p-10 flex flex-col">
-        <header className="mb-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto p-6 md:p-10 flex flex-col relative">
+        {/* Invisible overlay to close suggestions when clicking outside */}
+        {activeInput && (
+          <div 
+            className="fixed inset-0 z-10" 
+            onClick={() => setActiveInput(null)} 
+          />
+        )}
+
+        <header className="mb-6 relative z-20">
           <h1 className="text-3xl font-extrabold text-[#111827] mb-2">Create New Delivery</h1>
           <p className="text-[#6b7280]">Tap on the map to set your pickup and drop-off points, or enter them manually.</p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 relative z-20">
           {/* Left Column: Form & Price Summary */}
           <div className="space-y-6 flex flex-col">
             <form onSubmit={handleConfirm} className="rounded-xl border border-[#e5e7eb] bg-white p-8 space-y-6 shadow-sm">
               <div className="space-y-4">
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-[#6b7280] mb-2 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#00B14F]"></span> Pickup Location
                   </label>
                   <input 
                     type="text" 
                     placeholder="Where are we picking up from?"
-                    className="grab-input"
+                    className="grab-input w-full"
                     value={pickup}
+                    onFocus={() => setActiveInput('pickup')}
                     onChange={(e) => {
                       setPickup(e.target.value);
-                      if (pickupCoords) setPickupCoords(null); // Clear coords if user types manually
+                      if (pickupCoords) setPickupCoords(null);
+                      setActiveInput('pickup');
                     }}
                     required
                   />
+                  {pickupSuggestions.length > 0 && activeInput === 'pickup' && (
+                    <ul className="absolute z-50 w-full bg-white border border-[#e5e7eb] rounded-xl mt-1 shadow-2xl max-h-60 overflow-y-auto">
+                      {pickupSuggestions.map((s, i) => (
+                        <li 
+                          key={i} 
+                          onClick={() => handleSuggestionClick('pickup', s)}
+                          className="px-4 py-3 hover:bg-[#00B14F]/10 cursor-pointer border-b border-gray-100 last:border-0 text-sm text-[#1f2937] transition-colors"
+                        >
+                          <div className="font-semibold text-[#111827]">{s.display_name.split(',')[0]}</div>
+                          <div className="text-xs text-[#6b7280] truncate">{s.display_name.split(',').slice(1).join(',')}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
 
                 <div className="flex justify-center py-2">
                   <div className="w-1 h-8 border-l-2 border-dashed border-[#e5e7eb]"></div>
                 </div>
 
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-[#6b7280] mb-2 flex items-center gap-2">
                     <span className="w-2 h-2 rounded bg-red-400"></span> Drop-off Location
                   </label>
                   <input 
                     type="text" 
                     placeholder="Where are we heading?"
-                    className="grab-input"
+                    className="grab-input w-full"
                     value={dropoff}
+                    onFocus={() => setActiveInput('dropoff')}
                     onChange={(e) => {
                       setDropoff(e.target.value);
-                      if (dropoffCoords) setDropoffCoords(null); // Clear coords if user types manually
+                      if (dropoffCoords) setDropoffCoords(null);
+                      setActiveInput('dropoff');
                     }}
                     required
                   />
+                  {dropoffSuggestions.length > 0 && activeInput === 'dropoff' && (
+                    <ul className="absolute z-50 w-full bg-white border border-[#e5e7eb] rounded-xl mt-1 shadow-2xl max-h-60 overflow-y-auto">
+                      {dropoffSuggestions.map((s, i) => (
+                        <li 
+                          key={i} 
+                          onClick={() => handleSuggestionClick('dropoff', s)}
+                          className="px-4 py-3 hover:bg-[#00B14F]/10 cursor-pointer border-b border-gray-100 last:border-0 text-sm text-[#1f2937] transition-colors"
+                        >
+                          <div className="font-semibold text-[#111827]">{s.display_name.split(',')[0]}</div>
+                          <div className="text-xs text-[#6b7280] truncate">{s.display_name.split(',').slice(1).join(',')}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             </form>
