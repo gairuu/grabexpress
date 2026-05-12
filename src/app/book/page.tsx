@@ -188,20 +188,23 @@ export default function BookDeliveryPage() {
       const deliveryData = {
         customer_id: user.id,
         customer_name: user.name,
+        driver_id: '',
+        driver_name: 'Unassigned',
         pickup_location: pickup,
         dropoff_location: dropoff,
         delivery_status: 'pending' as const,
         delivery_fee: fee,
         payment_method: 'cash' as const,
-        vehicle_type: 'Motorcycle' as const,
         booking_time: new Date().toISOString(),
-        sender_name: '', // Optional placeholders for now
+        estimated_time: '',
+        sender_name: '',
         sender_phone: '',
         recipient_name: '',
         recipient_phone: '',
         item_size: 'S' as const,
         item_weight: 1,
-        item_type: 'Documents'
+        item_type: 'Documents',
+        vehicle_type: 'Motorcycle' as const
       };
 
       const deliveryId = await bookAndMatch(deliveryData);
