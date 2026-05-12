@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import StatusBadge from '@/components/StatusBadge';
 import ChatBox from '@/components/ChatBox';
-import IncomingJobModal from '@/components/IncomingJobModal';
 import { useApp } from '@/context/AppContext';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Clock, Truck, CheckCircle2, Package, MessageCircle } from 'lucide-react';
@@ -312,14 +311,6 @@ export default function DriverDashboardPage() {
           <ChatBox 
             deliveryId={selectedDelivery.id} 
             recipientName={selectedDelivery.customer_name} 
-          />
-        )}
-
-        {incomingJob && (
-          <IncomingJobModal 
-            delivery={incomingJob}
-            onAccept={handleAcceptJob}
-            onReject={() => setIncomingJob(null)}
           />
         )}
       </main>
