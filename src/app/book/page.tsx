@@ -6,7 +6,6 @@ import { useApp } from '@/context/AppContext';
 import { calculateFee, formatCurrency } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import Map from '@/components/Map';
-import { supabase } from '@/lib/supabase';
 
 function calculateDistanceKM(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371; // Radius of the earth in km
@@ -32,10 +31,6 @@ export default function BookDeliveryPage() {
   const [activeInput, setActiveInput] = useState<'pickup' | 'dropoff' | null>(null);
 
   const { user, loading, setBooking } = useApp();
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchTimer, setSearchTimer] = useState(30);
-  const [currentDeliveryId, setCurrentDeliveryId] = useState<string | null>(null);
-  const [error, setError] = useState('');
   const router = useRouter();
 
   let fee = 0;
@@ -122,40 +117,6 @@ export default function BookDeliveryPage() {
     }
   };
 
-  useEffect(() => {
-    if (!isSearching || !currentDeliveryId) return;
-
-    const timer = setInterval(() => {
-      setSearchTimer(t => {
-        if (t <= 1) {
-          setIsSearching(false);
-          setError('No drivers accepted your request.');
-          return 30;
-        }
-        return t - 1;
-      });
-    }, 1000);
-
-    const channel = supabase
-      .channel(`matching-${currentDeliveryId}`)
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'deliveries',
-        filter: `id=eq.${currentDeliveryId}`
-      }, (payload) => {
-        if (payload.new.broadcast_status === 'matched') {
-          router.push(`/tracking/${currentDeliveryId}`);
-        }
-      })
-      .subscribe();
-
-    return () => {
-      clearInterval(timer);
-      supabase.removeChannel(channel);
-    };
-  }, [isSearching, currentDeliveryId, router]);
-
   const handleMapClick = async (lat: number, lng: number) => {
     setActiveInput(null); // Close any open suggestion boxes
     if (!pickupCoords) {
@@ -177,66 +138,6 @@ export default function BookDeliveryPage() {
       setDropoff('');
     }
   };
-
-  const handleConfirm = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pickup || !dropoff || !user) return;
-
-    try {
-      const { bookAndMatch } = useApp(); // Correct way to get the function
-      
-      const deliveryData = {
-        customer_id: user.id,
-        customer_name: user.name,
-        driver_id: '',
-        driver_name: 'Unassigned',
-        pickup_location: pickup,
-        dropoff_location: dropoff,
-        delivery_status: 'pending' as const,
-        delivery_fee: fee,
-        payment_method: 'cash' as const,
-        booking_time: new Date().toISOString(),
-        estimated_time: '',
-        sender_name: '',
-        sender_phone: '',
-        recipient_name: '',
-        recipient_phone: '',
-        item_size: 'S' as const,
-        item_weight: 1,
-        item_type: 'Documents',
-        vehicle_type: 'Motorcycle' as const
-      };
-
-      const deliveryId = await bookAndMatch(deliveryData);
-
-      setCurrentDeliveryId(deliveryId);
-      setIsSearching(true);
-      setSearchTimer(30);
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
-  if (loading) {
-    return <div className="min-h-screen bg-[#f3f5f7] flex items-center justify-center"><div className="text-[#6b7280]">Loading...</div></div>;
-  }
-
-  if (!user || user.role === 'driver') {
-    return null;
-  }
-
-  return (
-    <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937] flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 w-full max-w-7xl mx-auto p-6 md:p-10 flex flex-col relative">
-        {/* Invisible overlay to close suggestions when clicking outside */}
-        {activeInput && (
-          <div 
-            className="fixed inset-0 z-10" 
-            onClick={() => setActiveInput(null)} 
-          />
-        )}
 
   const handleConfirm = (e: React.FormEvent) => {
     e.preventDefault();
@@ -277,7 +178,6 @@ export default function BookDeliveryPage() {
           <h1 className="text-3xl font-extrabold text-[#111827] mb-2">Create New Delivery</h1>
           <p className="text-[#6b7280]">Tap on the map to set your pickup and drop-off points, or enter them manually.</p>
         </header>
-
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 relative z-20">
           {/* Left Column: Form & Price Summary */}
@@ -419,8 +319,6 @@ export default function BookDeliveryPage() {
           </div>
         </div>
       </main>
-
-
     </div>
   );
 }
