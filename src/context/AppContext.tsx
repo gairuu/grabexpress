@@ -92,7 +92,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       try {
         if (session?.user) {
-          const profile = await fetchProfile(session.user.id);
+          let profile = await fetchProfile(session.user.id);
+          
+          // If no profile exists (e.g. first time Google sign-in)
+          if (!profile) {
+            console.log('No profile found for user, creating default...');
+            const { data: newUser } = await supabase.auth.getUser();
+            if (newUser.user) {
+              const name = newUser.user.user_metadata.full_name || newUser.user.email?.split('@')[0] || 'User';
+              const email = newUser.user.email || '';
+              
+              // Create the profile
+              const { error: insertError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: newUser.user.id,
+                  name,
+                  email,
+                  role: 'customer' // Default role for Google users
+                });
+                
+              if (!insertError) {
+                profile = await fetchProfile(newUser.user.id);
+              }
+            }
+          }
+          
           setUser(profile);
         }
       } catch (err) {
@@ -101,10 +126,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         clearTimeout(safetyTimeout);
       }
-    }).catch(err => {
-      console.error("Critical auth session fetch error:", err);
-      setLoading(false);
-      clearTimeout(safetyTimeout);
     });
 
     // Listen for auth changes
@@ -219,7 +240,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: window.location.origin,
       },
     });
     if (error) console.error('Google Sign In Error:', error.message);
