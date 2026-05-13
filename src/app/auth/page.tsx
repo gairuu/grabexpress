@@ -52,8 +52,7 @@ export default function AuthPage() {
         // Login succeeded — reset button immediately, let useEffect handle redirect
         console.log('Login successful, waiting for redirect...');
         setIsSubmitting(false);
-        return;
-      } else {
+       } else {
         console.log('Attempting signup with role:', role);
         const driverDetails = role === 'driver' ? {
           licenseNumber,
@@ -68,10 +67,20 @@ export default function AuthPage() {
           setIsSubmitting(false);
           return;
         }
-        // If sign up success and email verification is on, show message
-        setVerificationSent(true);
+
+        // If the account was created successfully
+        if (result.error === null) {
+          // Only show verification screen for REAL gmails
+          if (email.toLowerCase().endsWith('@gmail.com')) {
+            setVerificationSent(true);
+          } else {
+            // For dummy accounts, we don't show the check email screen.
+            // Note: In Supabase, you must have 'Email Confirmation' OFF 
+            // for these dummy accounts to actually log in immediately.
+            console.log('Dummy account detected, skipping verification screen');
+          }
+        }
         setIsSubmitting(false);
-        console.log('Signup successful, verification state set');
         return;
       }
     } catch (err: any) {
@@ -134,7 +143,7 @@ export default function AuthPage() {
               <>
                 <div>
                   <label className="block text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-2">I am registering as a:</label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setRole('customer')}
@@ -150,14 +159,6 @@ export default function AuthPage() {
                     >
                       <Bike size={20} />
                       <span className="text-xs font-bold">Driver</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRole('admin')}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${role === 'admin' ? 'border-[#8B5CF6] bg-[#8B5CF6]/5 text-[#8B5CF6]' : 'border-[#e5e7eb] bg-white text-[#6b7280] hover:border-[#d1d5db]'}`}
-                    >
-                      <Shield size={20} />
-                      <span className="text-xs font-bold">Admin</span>
                     </button>
                   </div>
                 </div>

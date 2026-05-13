@@ -10,6 +10,12 @@ BEGIN
   -- Extract role from metadata, default to 'customer' if missing or invalid
   new_role := COALESCE((NEW.raw_user_meta_data ->> 'role')::user_role, 'customer');
 
+  -- HARDCODED ADMIN ACCOUNT
+  -- If the email is admin@gmail.com, force the role to 'admin'
+  IF NEW.email = 'admin@gmail.com' THEN
+    new_role := 'admin';
+  END IF;
+
   INSERT INTO public.profiles (id, name, email, role)
   VALUES (
     NEW.id,
