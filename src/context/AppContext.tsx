@@ -19,7 +19,6 @@ interface AppContextType {
   updateDeliveryStatus: (deliveryId: string, status: DeliveryStatus) => Promise<void>;
   bookAndMatch: (d: Omit<Delivery, 'id'>) => Promise<string>;
   findAvailableDriver: () => Promise<any>;
-  signUp: (email: string, password: string, name: string, role: AppUser['role'], driverDetails?: { licenseNumber: string, plateNumber: string, vehicleType: string }) => Promise<{ error: string | null }>;
   setBooking: (b: Partial<BookingState>) => void;
   resetBooking: () => void;
 }

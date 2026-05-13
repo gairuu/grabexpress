@@ -20,7 +20,7 @@ export default function AuthPage() {
   // Driver specific fields
   const [licenseNumber, setLicenseNumber] = useState('');
   const [plateNumber, setPlateNumber] = useState('');
-  const [vehicleType, setVehicleType] = useState<AppUser['role'] === 'driver' ? 'Motorcycle' : any>('Motorcycle');
+  const [vehicleType, setVehicleType] = useState('Motorcycle');
 
   const { signUp, signIn, signInWithGoogle, user, loading } = useApp();
   const router = useRouter();
