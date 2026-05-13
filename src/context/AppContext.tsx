@@ -9,7 +9,7 @@ interface AppContextType {
   loading: boolean;
   deliveries: Delivery[];
   booking: BookingState;
-  signUp: (email: string, password: string, name: string, role: AppUser['role']) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, name: string, role: AppUser['role'], driverDetails?: { licenseNumber: string, plateNumber: string, vehicleType: string }) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -19,6 +19,7 @@ interface AppContextType {
   updateDeliveryStatus: (deliveryId: string, status: DeliveryStatus) => Promise<void>;
   bookAndMatch: (d: Omit<Delivery, 'id'>) => Promise<string>;
   findAvailableDriver: () => Promise<any>;
+  signUp: (email: string, password: string, name: string, role: AppUser['role'], driverDetails?: { licenseNumber: string, plateNumber: string, vehicleType: string }) => Promise<{ error: string | null }>;
   setBooking: (b: Partial<BookingState>) => void;
   resetBooking: () => void;
 }
@@ -174,7 +175,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   // ── Auth functions ──
-  const signUp = useCallback(async (email: string, password: string, name: string, role: AppUser['role']) => {
+  const signUp = useCallback(async (email: string, password: string, name: string, role: AppUser['role'], driverDetails?: { licenseNumber: string, plateNumber: string, vehicleType: string }) => {
     try {
       console.log('Starting signUp process for:', email, role);
       const { data, error } = await supabase.auth.signUp({
@@ -203,21 +204,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.log('Profile update successful');
       }
 
-      // If driver, create drivers row
+      // If driver, create drivers row AND vehicle row
       if (role === 'driver') {
-        console.log('Creating driver record...');
+        console.log('Creating driver and vehicle record...');
         const { error: driverError } = await supabase.from('drivers').insert({
           id: data.user.id,
-          vehicle_type: 'Motorcycle',
-          plate_number: 'TBD',
-          rating: 5.0,
+          license_number: driverDetails?.licenseNumber || 'PENDING',
           status: 'available',
+          rating: 5.0,
         });
         
         if (driverError) {
           console.error("Failed to create driver record:", driverError);
         } else {
-          console.log('Driver record created successfully');
+          // Create vehicle record
+          const { error: vehicleError } = await supabase.from('vehicles').insert({
+            driver_id: data.user.id,
+            plate_number: driverDetails?.plateNumber || 'PENDING',
+            vehicle_type: driverDetails?.vehicleType || 'Motorcycle',
+            vehicle_model: 'TBD',
+            color: 'TBD'
+          });
+          
+          if (vehicleError) console.error("Failed to create vehicle record:", vehicleError);
+          else console.log('Driver and Vehicle records created successfully');
         }
       }
 
@@ -462,26 +472,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       throw new Error(`Failed to update status: ${updateError.message}`);
     }
 
-    // 3. Handle business rules (driver availability, payments)
+    // 3. Handle business rules (driver availability)
     if ((status === 'delivered' || status === 'cancelled') && currentDel) {
       // Free up the driver
       const drId = currentDel.driver_id;
       if (drId) {
         console.log('Freeing up driver:', drId);
         await supabase.from('drivers').update({ status: 'available' }).eq('id', drId);
-      }
-      
-      if (status === 'delivered') {
-        try {
-          await supabase.from('payments').insert({
-            delivery_id: deliveryId,
-            amount: currentDel.delivery_fee,
-            payment_method: currentDel.payment_method,
-            payment_status: 'completed'
-          });
-        } catch (paymentErr) {
-          console.warn('Payment record insert failed:', paymentErr);
-        }
       }
     }
 

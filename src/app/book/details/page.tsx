@@ -37,13 +37,12 @@ export default function BookingDetailsPage() {
   }, [booking, router]);
 
   // Pricing calculation
-  const baseFare = 49;
-  const distanceFare = 150; // Mock distance fare
+  const distanceFare = booking.delivery_fee || 49; // Use the fee calculated from distance in step 1
   const sizeMultiplier = SIZES.find(s => s.id === selectedSize)?.priceMultiplier || 1;
   const vehicleExtra = selectedVehicle === 'Car' ? 100 : 0;
   const guaranteePrice = guarantee === 'standard' ? 7 : guarantee === 'premium' ? 9 : 0;
   
-  const totalPrice = (baseFare + distanceFare + vehicleExtra) * sizeMultiplier + guaranteePrice;
+  const totalPrice = (distanceFare + vehicleExtra) * sizeMultiplier + guaranteePrice;
   
   const isFormValid = 
     senderName.trim() !== '' && 

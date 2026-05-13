@@ -16,6 +16,12 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
+  
+  // Driver specific fields
+  const [licenseNumber, setLicenseNumber] = useState('');
+  const [plateNumber, setPlateNumber] = useState('');
+  const [vehicleType, setVehicleType] = useState<AppUser['role'] === 'driver' ? 'Motorcycle' : any>('Motorcycle');
+
   const { signUp, signIn, signInWithGoogle, user, loading } = useApp();
   const router = useRouter();
 
@@ -49,7 +55,13 @@ export default function AuthPage() {
         return;
       } else {
         console.log('Attempting signup with role:', role);
-        const result = await signUp(email, password, name, role);
+        const driverDetails = role === 'driver' ? {
+          licenseNumber,
+          plateNumber,
+          vehicleType
+        } : undefined;
+        
+        const result = await signUp(email, password, name, role, driverDetails);
         console.log('Signup result:', result);
         if (result.error) {
           setError(result.error);
@@ -161,6 +173,47 @@ export default function AuthPage() {
                     placeholder="Juan Dela Cruz"
                   />
                 </div>
+
+                {role === 'driver' && (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                    <div>
+                      <label className="block text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-2">License Number</label>
+                      <input
+                        type="text"
+                        required
+                        value={licenseNumber}
+                        onChange={(e) => setLicenseNumber(e.target.value)}
+                        className="grab-input w-full bg-[#f9fafb]"
+                        placeholder="N01-XX-XXXXXX"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-2">Plate Number</label>
+                        <input
+                          type="text"
+                          required
+                          value={plateNumber}
+                          onChange={(e) => setPlateNumber(e.target.value)}
+                          className="grab-input w-full bg-[#f9fafb]"
+                          placeholder="ABC 1234"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-2">Vehicle Type</label>
+                        <select 
+                          className="grab-input w-full bg-[#f9fafb]"
+                          value={vehicleType}
+                          onChange={(e) => setVehicleType(e.target.value)}
+                        >
+                          <option value="Motorcycle">Motorcycle</option>
+                          <option value="Car">Car</option>
+                          <option value="Van">Van</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
