@@ -45,14 +45,18 @@ export default function AuthPage() {
         const result = await signIn(email, password);
         console.log('Login result:', result);
         if (result.error) {
-          setError(result.error);
+          // Give a clear hint if the account is unverified
+          if (result.error.toLowerCase().includes('email not confirmed') || result.error.toLowerCase().includes('invalid login')) {
+            setError('Login failed. If you just registered, make sure email confirmation is OFF in Supabase, or verify your email first.');
+          } else {
+            setError(result.error);
+          }
           setIsSubmitting(false);
           return;
         }
-        // Login succeeded — reset button immediately, let useEffect handle redirect
-        console.log('Login successful, waiting for redirect...');
+        // Login succeeded — let useEffect handle redirect
         setIsSubmitting(false);
-       } else {
+      } else {
         console.log('Attempting signup with role:', role);
         const driverDetails = role === 'driver' ? {
           licenseNumber,
@@ -70,15 +74,13 @@ export default function AuthPage() {
 
         // If the account was created successfully
         if (result.error === null) {
-          // Only show verification screen for REAL gmails
-          if (email.toLowerCase().endsWith('@gmail.com')) {
+          // Never show verification screen for admin@gmail.com or non-gmail accounts
+          const isAdminEmail = email.toLowerCase() === 'admin@gmail.com';
+          const isRealGmail = email.toLowerCase().endsWith('@gmail.com') && !isAdminEmail;
+          if (isRealGmail) {
             setVerificationSent(true);
-          } else {
-            // For dummy accounts, we don't show the check email screen.
-            // Note: In Supabase, you must have 'Email Confirmation' OFF 
-            // for these dummy accounts to actually log in immediately.
-            console.log('Dummy account detected, skipping verification screen');
           }
+          // All other accounts (including admin@gmail.com) skip straight through
         }
         setIsSubmitting(false);
         return;
