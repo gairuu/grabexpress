@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import Navbar from '@/components/Navbar';
 import { AppUser } from '@/lib/types';
-import { Mail, ArrowRight, User, Shield, Bike } from 'lucide-react';
+import { Mail, ArrowRight, User, Bike, Loader2 } from 'lucide-react';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -41,23 +41,14 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        console.log('Attempting login...');
         const result = await signIn(email, password);
-        console.log('Login result:', result);
         if (result.error) {
-          // Give a clear hint if the account is unverified
-          if (result.error.toLowerCase().includes('email not confirmed') || result.error.toLowerCase().includes('invalid login')) {
-            setError('Login failed. If you just registered, make sure email confirmation is OFF in Supabase, or verify your email first.');
-          } else {
-            setError(result.error);
-          }
+          setError(result.error);
           setIsSubmitting(false);
-          return;
         }
-        // Login succeeded — let useEffect handle redirect
-        setIsSubmitting(false);
+        // Don't setIsSubmitting(false) on success — keep the spinner 
+        // while useEffect waits for the user state to update and redirect
       } else {
-        console.log('Attempting signup with role:', role);
         const driverDetails = role === 'driver' ? {
           licenseNumber,
           plateNumber,
@@ -65,29 +56,25 @@ export default function AuthPage() {
         } : undefined;
         
         const result = await signUp(email, password, name, role, driverDetails);
-        console.log('Signup result:', result);
         if (result.error) {
           setError(result.error);
           setIsSubmitting(false);
           return;
         }
 
-        // If the account was created successfully
-        if (result.error === null) {
-          // Never show verification screen for admin@gmail.com or non-gmail accounts
-          const isAdminEmail = email.toLowerCase() === 'admin@gmail.com';
-          const isRealGmail = email.toLowerCase().endsWith('@gmail.com') && !isAdminEmail;
-          if (isRealGmail) {
-            setVerificationSent(true);
-          }
-          // All other accounts (including admin@gmail.com) skip straight through
+        // Only show verification screen for real gmails (not admin@gmail.com)
+        const isAdminEmail = email.toLowerCase() === 'admin@gmail.com';
+        const isRealGmail = email.toLowerCase().endsWith('@gmail.com') && !isAdminEmail;
+        
+        if (isRealGmail) {
+          setVerificationSent(true);
+          setIsSubmitting(false);
         }
-        setIsSubmitting(false);
-        return;
+        // For all other accounts, keep spinner and let useEffect handle redirect
       }
     } catch (err: any) {
-      console.error('Frontend Auth Error:', err);
-      setError('Something went wrong. Please check the console.');
+      console.error('Auth Error:', err);
+      setError('Something went wrong. Please try again.');
       setIsSubmitting(false);
     }
   };
@@ -178,7 +165,7 @@ export default function AuthPage() {
                 </div>
 
                 {role === 'driver' && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-2">License Number</label>
                       <input
@@ -250,8 +237,17 @@ export default function AuthPage() {
               disabled={isSubmitting}
               className="w-full btn-primary py-4 text-lg font-bold flex items-center justify-center gap-2 mt-2"
             >
-              {isSubmitting ? 'Please wait...' : (isLogin ? 'Log In' : 'Create Account')}
-              {!isSubmitting && <ArrowRight size={20} />}
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  {isLogin ? 'Logging in...' : 'Creating account...'}
+                </>
+              ) : (
+                <>
+                  {isLogin ? 'Log In' : 'Create Account'}
+                  <ArrowRight size={20} />
+                </>
+              )}
             </button>
           </form>
 
