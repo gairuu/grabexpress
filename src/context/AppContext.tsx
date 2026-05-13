@@ -232,14 +232,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     console.log('Starting signIn process for:', email);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       console.error('SignIn error:', error.message);
       return { error: error.message };
     }
+    // Immediately fetch and set the user profile so the redirect useEffect fires
+    if (data.user) {
+      const profile = await fetchProfile(data.user.id);
+      if (profile) {
+        setUser(profile);
+      }
+    }
     console.log('SignIn successful');
     return { error: null };
-  }, []);
+  }, [fetchProfile]);
 
   const signInWithGoogle = useCallback(async () => {
     const { error } = await supabase.auth.signInWithOAuth({
