@@ -23,6 +23,8 @@ export default function DashboardPage() {
       return () => clearTimeout(timer);
     } else if (user.role === 'driver') {
       router.push('/driver');
+    } else if (user.role === 'admin') {
+      router.push('/admin');
     }
   }, [user, router, loading]);
 

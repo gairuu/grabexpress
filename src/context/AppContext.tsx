@@ -151,6 +151,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setTimeout(async () => {
           try {
             if (event === 'SIGNED_IN' && session?.user) {
+              // Check if there's a pending role from a Google Signup
+              const pendingRole = localStorage.getItem('grab_signup_role');
+              if (pendingRole && session.user) {
+                console.log('Finalizing role setup for:', pendingRole);
+                
+                // 1. Update the profile role
+                await supabase.from('profiles').update({ role: pendingRole }).eq('id', session.user.id);
+                
+                // 2. If they are a driver, ensure driver and vehicle records exist
+                if (pendingRole === 'driver') {
+                  await supabase.from('drivers').upsert({ id: session.user.id, status: 'available', rating: 5.0 }).select();
+                  await supabase.from('vehicles').upsert({ 
+                    driver_id: session.user.id, 
+                    plate_number: 'PENDING', 
+                    vehicle_type: 'Motorcycle' 
+                  }).select();
+                }
+                
+                localStorage.removeItem('grab_signup_role');
+              }
+              
               const profile = await fetchProfile(session.user.id);
               setUser(profile);
             } else if (event === 'SIGNED_OUT') {
@@ -181,65 +202,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
         email,
         password,
         options: {
-          data: { name, role },
+          // These metadata fields are picked up by the database trigger 'handle_new_user'
+          data: { 
+            name, 
+            role,
+            licenseNumber: driverDetails?.licenseNumber,
+            plateNumber: driverDetails?.plateNumber,
+            vehicleType: driverDetails?.vehicleType
+          },
         },
       });
-
-      console.log('Supabase signUp response:', { user: data.user?.id, error });
 
       if (error) return { error: error.message };
       if (!data.user) return { error: 'Signup failed. Please try again.' };
 
-      console.log('Forcing profile update...');
-      // Force update the profile to ensure the trigger didn't default it to customer
-      const { error: profileUpdateError } = await supabase
-        .from('profiles')
-        .update({ role, name })
-        .eq('id', data.user.id);
-        
-      if (profileUpdateError) {
-        console.error("Failed to force update profile role:", profileUpdateError);
-      } else {
-        console.log('Profile update successful');
-      }
-
-      // If driver, create drivers row AND vehicle row
-      if (role === 'driver') {
-        console.log('Creating driver and vehicle record...');
-        const { error: driverError } = await supabase.from('drivers').insert({
-          id: data.user.id,
-          license_number: driverDetails?.licenseNumber || 'PENDING',
-          status: 'available',
-          rating: 5.0,
-        });
-        
-        if (driverError) {
-          console.error("Failed to create driver record:", driverError);
-        } else {
-          // Create vehicle record
-          const { error: vehicleError } = await supabase.from('vehicles').insert({
-            driver_id: data.user.id,
-            plate_number: driverDetails?.plateNumber || 'PENDING',
-            vehicle_type: driverDetails?.vehicleType || 'Motorcycle',
-            vehicle_model: 'TBD',
-            color: 'TBD'
-          });
-          
-          if (vehicleError) console.error("Failed to create vehicle record:", vehicleError);
-          else console.log('Driver and Vehicle records created successfully');
-        }
-      }
-
-      console.log('Setting user state and finishing...');
-      // Set user immediately so we don't need to wait for onAuthStateChange
-      setUser({
-        id: data.user.id,
-        name,
-        email,
-        avatar: name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
-        role,
-        ...(role === 'driver' ? { linkedDriverId: data.user.id } : {}),
-      });
+      // The database trigger 'handle_new_user' now automatically creates:
+      // 1. The profile record with the correct role.
+      // 2. The drivers record (if role is driver).
+      // 3. The vehicles record (if role is driver).
+      
+      console.log('Signup successful, trigger handling records...');
 
       return { error: null };
     } catch (err: any) {
