@@ -198,7 +198,10 @@ export default function DriverDashboardPage() {
     completed: deliveries.filter((job) => job.delivery_status === 'delivered').length,
   };
 
-  const myJobs = deliveries.filter(job => job.driver_id === user?.id && (job.delivery_status === 'pending' || job.delivery_status === 'in_transit'));
+  const myJobs = deliveries.filter(d => 
+    d.driver_id === user?.id && 
+    (d.delivery_status === 'pending' || d.delivery_status === 'in_transit' || d.delivery_status === 'arrived')
+  );
   const selectedDelivery = myJobs.find(j => j.id === selectedDeliveryId) || (myJobs.length > 0 ? myJobs[0] : null);
 
   return (
