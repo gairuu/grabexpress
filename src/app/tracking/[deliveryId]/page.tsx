@@ -151,6 +151,8 @@ export default function TrackingByIdPage() {
   } : booking.driver;
 
   const [progress, setProgress] = useState(0);
+  const pickupStr = delivery?.pickup_location || booking.pickup_location;
+  const dropoffStr = delivery?.dropoff_location || booking.dropoff_location;
   
   useEffect(() => {
     if (realStatus === 'in_transit') {
