@@ -1,4 +1,4 @@
-export type DeliveryStatus = 'pending' | 'in_transit' | 'delivered' | 'cancelled';
+export type DeliveryStatus = 'pending' | 'in_transit' | 'arrived' | 'delivered' | 'cancelled';
 export type PaymentMethod = 'cash' | 'card' | 'ewallet';
 export type VehicleType = 'Motorcycle' | 'Car' | 'Van';
 

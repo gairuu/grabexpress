@@ -360,14 +360,33 @@ export default function DriverDashboardPage() {
                       >
                         {loadingId === myJobs[0].id ? 'Processing...' : 'START DELIVERY'}
                       </button>
-                    ) : (
+                    ) : myJobs[0].delivery_status === 'in_transit' ? (
                       <button 
-                        onClick={() => handleStatusUpdate(myJobs[0].id, 'delivered')}
-                        className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20"
+                        onClick={() => handleStatusUpdate(myJobs[0].id, 'arrived')}
+                        className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black text-lg hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/20"
                         disabled={loadingId === myJobs[0].id}
                       >
-                        {loadingId === myJobs[0].id ? 'Processing...' : 'MARK AS DELIVERED'}
+                        {loadingId === myJobs[0].id ? 'Processing...' : 'I HAVE ARRIVED'}
                       </button>
+                    ) : (
+                      <div className="space-y-3">
+                        <button 
+                          onClick={() => handleStatusUpdate(myJobs[0].id, 'delivered')}
+                          className={`w-full py-5 text-white rounded-2xl font-black text-lg transition-all shadow-xl ${
+                            myJobs[0].payment_status === 'paid' 
+                              ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' 
+                              : 'bg-gray-700 opacity-50 cursor-not-allowed'
+                          }`}
+                          disabled={loadingId === myJobs[0].id || myJobs[0].payment_status === 'unpaid'}
+                        >
+                          {loadingId === myJobs[0].id ? 'Processing...' : 'MARK AS DELIVERED'}
+                        </button>
+                        {myJobs[0].payment_status === 'unpaid' && (
+                          <p className="text-xs text-center text-yellow-500 font-bold animate-pulse">
+                            ⚠️ Awaiting Customer Payment...
+                          </p>
+                        )}
+                      </div>
                     )}
                     <button 
                       onClick={() => handleStatusUpdate(myJobs[0].id, 'cancelled')}

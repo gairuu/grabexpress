@@ -599,11 +599,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clearDeliveries = useCallback(async () => {
     if (!user || user.role !== 'customer') return;
 
-    // Delete all deliveries for this customer to make it look clean
+    // Delete all deliveries for this customer that are paid or cancelled
     const { error } = await supabase
       .from('deliveries')
       .delete()
-      .eq('customer_id', user.id);
+      .eq('customer_id', user.id)
+      .or('payment_status.eq.paid,delivery_status.eq.cancelled');
 
     if (error) {
       console.error('Error clearing deliveries:', error.message);

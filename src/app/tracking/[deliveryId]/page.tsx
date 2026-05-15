@@ -355,10 +355,20 @@ export default function TrackingByIdPage() {
               </div>
             </div>
 
-            {realStatus === 'delivered' && delivery?.payment_status === 'unpaid' && (
+            {realStatus === 'arrived' && (
+              <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 text-center animate-bounce-subtle mb-6">
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Bell className="text-orange-600" size={24} />
+                </div>
+                <h3 className="text-lg font-black text-orange-900">Driver has Arrived!</h3>
+                <p className="text-sm text-orange-700">The driver is at your location. Please complete the payment to receive your package.</p>
+              </div>
+            )}
+
+            {(realStatus === 'arrived' || (realStatus === 'in_transit' && delivery?.payment_status === 'unpaid')) && (
               <button
                 onClick={() => router.push(`/payment/${params.deliveryId}`)}
-                className="btn-primary py-4 text-lg font-bold grab-glow w-full fade-in"
+                className="btn-primary py-4 text-lg font-bold grab-glow w-full mb-6"
               >
                 Complete Payment
               </button>
