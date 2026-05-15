@@ -1,11 +1,12 @@
-import { Clock, Truck, CheckCircle2 } from 'lucide-react';
+import { Clock, Truck, Bell, CheckCircle2 } from 'lucide-react';
 import { DeliveryStatus } from '@/lib/types';
 
-const STEPS: DeliveryStatus[] = ['pending', 'in_transit', 'delivered'];
+const STEPS: DeliveryStatus[] = ['pending', 'in_transit', 'arrived', 'delivered'];
 
 const STEP_META: Record<string, { icon: any; label: string; desc: string }> = {
-  pending:    { icon: Clock, label: 'Pending',    desc: 'Your booking is confirmed' },
+  pending:    { icon: Clock, label: 'Pending',    desc: 'Waiting for driver to start pickup' },
   in_transit: { icon: Truck, label: 'In Transit', desc: 'Driver is on the way' },
+  arrived:    { icon: Bell, label: 'Arrived',    desc: 'Driver has arrived at location' },
   delivered:  { icon: CheckCircle2, label: 'Delivered',  desc: 'Package delivered successfully' },
 };
 

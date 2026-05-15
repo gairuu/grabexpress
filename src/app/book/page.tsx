@@ -29,6 +29,7 @@ export default function BookDeliveryPage() {
   const [pickupSuggestions, setPickupSuggestions] = useState<any[]>([]);
   const [dropoffSuggestions, setDropoffSuggestions] = useState<any[]>([]);
   const [activeInput, setActiveInput] = useState<'pickup' | 'dropoff' | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const { user, loading, setBooking } = useApp();
   const router = useRouter();
@@ -143,6 +144,31 @@ export default function BookDeliveryPage() {
     e.preventDefault();
     if (!pickup || !dropoff) return;
 
+    // BUSINESS RULE: Prevent inter-island or impossible land deliveries
+    if (pickupCoords && dropoffCoords) {
+      const distanceKm = calculateDistanceKM(pickupCoords[0], pickupCoords[1], dropoffCoords[0], dropoffCoords[1]);
+      
+      // If distance is over 100km, it's likely inter-island or beyond land-vehicle service area
+      if (distanceKm > 100) {
+        setError('Delivery is outside the land-vehicle service area. Inter-island deliveries are not supported.');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // Simple keyword check for major regions to be extra safe
+      const lowerPickup = pickup.toLowerCase();
+      const lowerDropoff = dropoff.toLowerCase();
+      const regions = ['cebu', 'manila', 'davao', 'iloilo', 'bacolod'];
+      
+      for (const region of regions) {
+        if (lowerPickup.includes(region) && !lowerDropoff.includes(region)) {
+          setError(`Delivery must be within the same region. You cannot book from ${region} to another province.`);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+      }
+    }
+
     setBooking({
       pickup_location: pickup,
       dropoff_location: dropoff,
@@ -179,6 +205,13 @@ export default function BookDeliveryPage() {
           <p className="text-[#6b7280]">Tap on the map to set your pickup and drop-off points, or enter them manually.</p>
         </header>
 
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-6 py-4 rounded-xl font-bold flex items-center gap-3 animate-shake relative z-20">
+            <span className="text-xl">⚠️</span>
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 relative z-20">
           {/* Left Column: Form & Price Summary */}
           <div className="space-y-6 flex flex-col">
@@ -198,6 +231,7 @@ export default function BookDeliveryPage() {
                       setPickup(e.target.value);
                       if (pickupCoords) setPickupCoords(null);
                       setActiveInput('pickup');
+                      setError(null);
                     }}
                     required
                   />
@@ -235,6 +269,7 @@ export default function BookDeliveryPage() {
                       setDropoff(e.target.value);
                       if (dropoffCoords) setDropoffCoords(null);
                       setActiveInput('dropoff');
+                      setError(null);
                     }}
                     required
                   />
