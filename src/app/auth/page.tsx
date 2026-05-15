@@ -45,9 +45,10 @@ export default function AuthPage() {
         if (result.error) {
           setError(result.error);
           setIsSubmitting(false);
+        } else {
+          // Force a small timeout to reset the button if for some reason we don't redirect
+          setTimeout(() => setIsSubmitting(false), 5000);
         }
-        // Don't setIsSubmitting(false) on success — keep the spinner 
-        // while useEffect waits for the user state to update and redirect
       } else {
         const driverDetails = role === 'driver' ? {
           licenseNumber,
@@ -62,15 +63,8 @@ export default function AuthPage() {
           return;
         }
 
-        // Only show verification screen for real gmails (not admin@gmail.com)
-        const isAdminEmail = email.toLowerCase() === 'admin@gmail.com';
-        const isRealGmail = email.toLowerCase().endsWith('@gmail.com') && !isAdminEmail;
-        
-        if (isRealGmail) {
-          setVerificationSent(true);
-          setIsSubmitting(false);
-        }
-        // For all other accounts, keep spinner and let useEffect handle redirect
+        // Always assume successful signup leads to immediate login attempt or dashboard redirect
+        // Skip the verification screen entirely for development/dummy accounts
       }
     } catch (err: any) {
       console.error('Auth Error:', err);
@@ -94,7 +88,11 @@ export default function AuthPage() {
               Please click the link to activate your account.
             </p>
             <button 
-              onClick={() => { setVerificationSent(false); setIsLogin(true); }}
+              onClick={() => { 
+                setVerificationSent(false); 
+                setIsLogin(true); 
+                setIsSubmitting(false); // Reset the loop
+              }}
               className="w-full btn-primary py-4"
             >
               Back to Login

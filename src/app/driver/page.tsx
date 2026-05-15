@@ -119,6 +119,7 @@ export default function DriverDashboardPage() {
       if (error) throw error;
 
       setIncomingJob(null);
+      setSelectedDeliveryId(incomingJob.id);
       await fetchDeliveries();
     } catch (err) {
       console.error('Failed to accept job:', err);
@@ -198,7 +199,7 @@ export default function DriverDashboardPage() {
   };
 
   const myJobs = deliveries.filter(job => job.driver_id === user?.id && (job.delivery_status === 'pending' || job.delivery_status === 'in_transit'));
-  const selectedDelivery = myJobs.find(j => j.id === selectedDeliveryId);
+  const selectedDelivery = myJobs.find(j => j.id === selectedDeliveryId) || (myJobs.length > 0 ? myJobs[0] : null);
 
   return (
     <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937]">
