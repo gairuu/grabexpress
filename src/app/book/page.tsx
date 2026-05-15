@@ -192,13 +192,30 @@ export default function BookDeliveryPage() {
         return;
       }
       
-      // 2. Region/Province Check
-      const isMetroManila = (p: string) => 
-        p.includes('manila') || p.includes('ncr') || p.includes('capital region') || 
-        p.includes('quezon city') || p.includes('makati') || p.includes('pasig');
+      // 2. Strict Province/State/Region match with "Fuzzy" overlap support
+      const p1 = pickupProvince?.toLowerCase() || '';
+      const p2 = dropoffProvince?.toLowerCase() || '';
       
-      if (p1 !== p2 && !(isMetroManila(p1) && isMetroManila(p2))) {
-        setError(`Service Boundary Error: You can only deliver within the same region (${pickupProvince || 'Your Region'}). Pickup: ${p1}, Drop-off: ${p2}.`);
+      // Check if they are actually the same or part of the same Philippine region groups
+      const areRelated = (a: string, b: string) => {
+        if (a === b) return true;
+        if (a.includes(b) || b.includes(a)) return true;
+        
+        // Special Philippine region overlaps
+        const groups = [
+          ['cebu', 'central visayas', 'region vii'],
+          ['manila', 'ncr', 'national capital region', 'rizal', 'bulacan', 'cavite', 'laguna'],
+          ['davao', 'region xi'],
+          ['negros', 'bacolod', 'dumaguete', 'region vi', 'region vii']
+        ];
+        
+        return groups.some(group => 
+          group.some(g => a.includes(g)) && group.some(g => b.includes(g))
+        );
+      };
+      
+      if (!areRelated(p1, p2)) {
+        setError(`Service Boundary Error: You can only deliver within the same region. Pickup is in "${pickupProvince || 'Your Area'}" but Drop-off is in "${dropoffProvince || 'Your Area'}".`);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
