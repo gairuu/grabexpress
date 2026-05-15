@@ -205,9 +205,6 @@ export default function TrackingByIdPage() {
     return null;
   }
 
-  const driverLat = pickupCoords[0] + (dropoffCoords[0] - pickupCoords[0]) * (progress / 100);
-  const driverLng = pickupCoords[1] + (dropoffCoords[1] - pickupCoords[1]) * (progress / 100);
-  const driverCoords: [number, number] = [driverLat, driverLng];
 
   return (
     <div className="min-h-screen bg-[#f3f5f7] text-[#1f2937] flex flex-col">
