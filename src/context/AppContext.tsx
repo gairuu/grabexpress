@@ -16,7 +16,7 @@ interface AppContextType {
   fetchDeliveries: () => Promise<void>;
   addDelivery: (d: Omit<Delivery, 'id'>) => Promise<string>;
   updateDelivery: (deliveryId: string, updates: Partial<Delivery>) => Promise<void>;
-  updateDeliveryStatus: (deliveryId: string, status: DeliveryStatus) => Promise<void>;
+  updateDeliveryStatus: (id: string, status: 'in_transit' | 'arrived' | 'delivered' | 'cancelled') => Promise<void>;
   bookAndMatch: (d: Omit<Delivery, 'id'>) => Promise<string>;
   findAvailableDriver: () => Promise<any>;
   setBooking: (b: Partial<BookingState>) => void;

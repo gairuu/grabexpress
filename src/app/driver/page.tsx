@@ -145,7 +145,7 @@ export default function DriverDashboardPage() {
     }
   };
 
-  const handleStatusUpdate = async (id: string, status: 'in_transit' | 'delivered' | 'cancelled') => {
+  const handleStatusUpdate = async (id: string, status: 'in_transit' | 'arrived' | 'delivered' | 'cancelled') => {
     if (status === 'cancelled' && !confirm('Are you sure you want to cancel this delivery?')) {
       return;
     }
