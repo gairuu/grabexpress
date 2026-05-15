@@ -18,7 +18,13 @@ export default function DriverDashboardPage() {
   const [driverStatus, setDriverStatus] = useState<'available' | 'busy' | 'offline'>('offline');
   const [statusLoading, setStatusLoading] = useState(false);
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null);
-  const [incomingJob, setIncomingJob] = useState<any>(null);
+  const [incomingJob, setIncomingJobState] = useState<any>(null);
+  const incomingJobRef = useRef<any>(null);
+
+  const setIncomingJob = (job: any) => {
+    setIncomingJobState(job);
+    incomingJobRef.current = job;
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -75,8 +81,20 @@ export default function DriverDashboardPage() {
         table: 'deliveries',
         filter: 'broadcast_status=eq.searching'
       }, (payload) => {
-        // Only show if it matches driver's vehicle type (simple check)
         setIncomingJob(payload.new);
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'deliveries',
+      }, (payload) => {
+        // If the job we are currently showing gets matched or cancelled, hide it
+        const currentJob = incomingJobRef.current;
+        if (currentJob && payload.new.id === currentJob.id) {
+          if (payload.new.broadcast_status !== 'searching' || payload.new.delivery_status === 'cancelled') {
+            setIncomingJob(null);
+          }
+        }
       })
       .subscribe();
 

@@ -524,7 +524,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             recipient_name: deliveryData.recipient_name,
             recipient_phone: deliveryData.recipient_phone,
             booking_time: new Date().toISOString(),
-            payment_status: 'unpaid'
+            payment_status: 'unpaid',
+            broadcast_status: 'matched'
           })
           .select('id')
           .single();
