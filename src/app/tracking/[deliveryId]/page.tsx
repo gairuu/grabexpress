@@ -267,61 +267,59 @@ export default function TrackingByIdPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mt-8">
-          <div className="md:col-span-2 space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-[#9ca3af] uppercase tracking-widest px-1">Your Driver</h3>
-              {displayDriver && <DriverCard driver={displayDriver as any} compact />}
-            </div>
-
-            <div className="rounded-xl border border-[#e5e7eb] bg-white p-6 shadow-sm space-y-6">
-              <h3 className="text-sm font-bold text-[#9ca3af] uppercase tracking-widest">Route Summary</h3>
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="w-2 h-2 rounded-full bg-[#00B14F] mt-1.5 flex-shrink-0"></div>
-                  <div>
-                    <div className="text-[10px] text-[#9ca3af] uppercase font-bold">Pickup</div>
-                    <div className="text-sm text-[#111827] font-medium">{pickupStr}</div>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-2 h-2 rounded bg-red-400 mt-1.5 flex-shrink-0"></div>
-                  <div>
-                    <div className="text-[10px] text-[#9ca3af] uppercase font-bold">Drop-off</div>
-                    <div className="text-sm text-[#111827] font-medium">{dropoffStr}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {realStatus === 'arrived' && (
-              <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 text-center animate-bounce-subtle mb-6">
-                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Bell className="text-orange-600" size={24} />
-                </div>
-                <h3 className="text-lg font-black text-orange-900">Driver has Arrived!</h3>
-                <p className="text-sm text-orange-700">The driver is at your location. Please complete the payment to receive your package.</p>
-              </div>
-            )}
-
-            {realStatus === 'arrived' && delivery?.payment_status === 'unpaid' && (
-              <button
-                onClick={() => router.push(`/payment/${params.deliveryId}`)}
-                className="btn-primary py-4 text-lg font-bold grab-glow w-full mb-6"
-              >
-                Complete Payment
-              </button>
-            )}
-
-            {realStatus === 'delivered' && delivery?.payment_status === 'paid' && (
-              <button
-                onClick={() => router.push(`/dashboard`)}
-                className="w-full py-4 text-[#00B14F] font-bold border-2 border-[#00B14F] rounded-xl hover:bg-[#00B14F]/5 transition-all fade-in"
-              >
-                Back to Dashboard
-              </button>
-            )}
+        <div className="max-w-2xl mx-auto space-y-6 mt-8">
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-[#9ca3af] uppercase tracking-widest px-1">Your Driver</h3>
+            {displayDriver && <DriverCard driver={displayDriver as any} compact />}
           </div>
+
+          <div className="rounded-xl border border-[#e5e7eb] bg-white p-6 shadow-sm space-y-6">
+            <h3 className="text-sm font-bold text-[#9ca3af] uppercase tracking-widest">Route Summary</h3>
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <div className="w-2 h-2 rounded-full bg-[#00B14F] mt-1.5 flex-shrink-0"></div>
+                <div>
+                  <div className="text-[10px] text-[#9ca3af] uppercase font-bold">Pickup</div>
+                  <div className="text-sm text-[#111827] font-medium">{pickupStr}</div>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="w-2 h-2 rounded bg-red-400 mt-1.5 flex-shrink-0"></div>
+                <div>
+                  <div className="text-[10px] text-[#9ca3af] uppercase font-bold">Drop-off</div>
+                  <div className="text-sm text-[#111827] font-medium">{dropoffStr}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {realStatus === 'arrived' && (
+            <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 text-center animate-bounce-subtle mb-6">
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Bell className="text-orange-600" size={24} />
+              </div>
+              <h3 className="text-lg font-black text-orange-900">Driver has Arrived!</h3>
+              <p className="text-sm text-orange-700">The driver is at your location. Please complete the payment to receive your package.</p>
+            </div>
+          )}
+
+          {realStatus === 'arrived' && delivery?.payment_status === 'unpaid' && (
+            <button
+              onClick={() => router.push(`/payment/${params.deliveryId}`)}
+              className="btn-primary py-4 text-lg font-bold grab-glow w-full mb-6"
+            >
+              Complete Payment
+            </button>
+          )}
+
+          {realStatus === 'delivered' && delivery?.payment_status === 'paid' && (
+            <button
+              onClick={() => router.push(`/dashboard`)}
+              className="w-full py-4 text-[#00B14F] font-bold border-2 border-[#00B14F] rounded-xl hover:bg-[#00B14F]/5 transition-all fade-in"
+            >
+              Back to Dashboard
+            </button>
+          )}
         </div>
 
         {delivery && (
