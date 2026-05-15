@@ -62,17 +62,9 @@ export default function BookDeliveryPage() {
       <Navbar />
 
       <main className="flex-1 w-full max-w-7xl mx-auto p-6 md:p-10 flex flex-col relative">
-        {/* Invisible overlay to close suggestions when clicking outside */}
-        {activeInput && (
-          <div 
-            className="fixed inset-0 z-10" 
-            onClick={() => setActiveInput(null)} 
-          />
-        )}
-
         <header className="mb-6 relative z-20">
           <h1 className="text-3xl font-extrabold text-[#111827] mb-2">Create New Delivery</h1>
-          <p className="text-[#6b7280]">Tap on the map to set your pickup and drop-off points, or enter them manually.</p>
+          <p className="text-[#6b7280]">Enter your pickup and drop-off locations to get started.</p>
         </header>
 
         {error && (
