@@ -1,18 +1,9 @@
-import { Driver } from './types';
-import { mockDrivers } from './mock-data';
-
 export function calculateFee(pickup: string, dropoff: string): number {
   const base = 49;
   const perChar = 2.5;
   const combined = (pickup.length + dropoff.length) * perChar;
   const raw = base + combined;
   return Math.round(raw / 5) * 5; // round to nearest 5
-}
-
-export function getBestDriver(): Driver {
-  const available = mockDrivers.filter((d) => d.status === 'available');
-  // Always pick the highest-rated available driver
-  return available.sort((a, b) => b.rating - a.rating)[0];
 }
 
 export function formatCurrency(amount: number): string {

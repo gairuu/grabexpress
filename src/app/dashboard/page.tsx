@@ -116,7 +116,11 @@ export default function DashboardPage() {
               <button 
                 onClick={async () => {
                   if (confirm('Are you sure you want to clear your delivery history? This will remove all completed and cancelled deliveries.')) {
-                    await clearDeliveries();
+                    try {
+                      await clearDeliveries();
+                    } catch (err: any) {
+                      alert('Failed to clear history: ' + err.message);
+                    }
                   }
                 }}
                 className="flex items-center gap-1 text-sm font-medium text-[#6b7280] hover:text-red-500 transition-colors"
