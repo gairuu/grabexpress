@@ -6,7 +6,7 @@ import StatusBadge from '@/components/StatusBadge';
 import ChatBox from '@/components/ChatBox';
 import { useApp } from '@/context/AppContext';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Clock, Truck, CheckCircle2, Package, Bell, MapPin, X } from 'lucide-react';
+import { Clock, Truck, CheckCircle2, Package, Bell, X } from 'lucide-react';
 import StatsCard from '@/components/StatsCard';
 import { supabase } from '@/lib/supabase';
 

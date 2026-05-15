@@ -6,26 +6,12 @@ import { useApp } from '@/context/AppContext';
 import Navbar from '@/components/Navbar';
 import DriverCard from '@/components/DriverCard';
 import StatusTimeline from '@/components/StatusTimeline';
-import Map from '@/components/Map';
 import ChatBox from '@/components/ChatBox';
 import { DeliveryStatus, Delivery } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 
-function parseOrMockCoords(location: string, defaultOffset: number = 0): [number, number] {
-  if (!location) return [14.5995 + defaultOffset, 120.9842 + defaultOffset];
-  const match = location.match(/Lat: ([-\d.]+), Lng: ([-\d.]+)/);
-  if (match) {
-    return [parseFloat(match[1]), parseFloat(match[2])];
-  }
-  let hash = 0;
-  for (let i = 0; i < location.length; i++) hash = location.charCodeAt(i) + ((hash << 5) - hash);
-  const latOffset = (hash % 100) / 10000;
-  const lngOffset = ((hash >> 4) % 100) / 10000;
-  return [14.5995 + defaultOffset + latOffset, 120.9842 + defaultOffset + lngOffset];
-}
-
 export default function TrackingByIdPage() {
-  const { booking, user, loading } = useApp();
+  const { user, loading } = useApp();
   const params = useParams<{ deliveryId: string }>();
   const router = useRouter();
   
@@ -33,6 +19,8 @@ export default function TrackingByIdPage() {
   const [isVerifying, setIsVerifying] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const hasFetchedRef = useRef(false);
+
+  const realStatus = delivery?.delivery_status || 'pending';
 
   const fetchCurrentStatus = async () => {
     if (!params.deliveryId) return;
@@ -270,71 +258,51 @@ export default function TrackingByIdPage() {
           >
             <RefreshCw size={20} />
           </button>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
-          <div className="md:col-span-3 space-y-6">
-            <div className="rounded-xl border border-[#e5e7eb] bg-white p-8 shadow-sm">
-              <h3 className="text-lg font-bold text-[#111827] mb-8">Tracking Details</h3>
-              <StatusTimeline currentStatus={realStatus} />
-              
-              {(realStatus === 'in_transit' || realStatus === 'delivered') && (
-                <div className="mt-10 pt-10 border-t border-[#f3f4f6]">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm font-bold text-[#111827]">Current Location (Simulated)</span>
-                    <span className="text-sm font-medium text-[#00b14f]">{progress}% to destination</span>
-                  </div>
-                  <div className="h-3 w-full bg-[#f3f4f6] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#00b14f] transition-all duration-300 ease-linear rounded-full"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  {realStatus === 'in_transit' && progress >= 85 && (
-                    <p className="mt-3 text-xs text-center text-[#9ca3af] font-medium animate-pulse">
-                      ⏳ Awaiting driver delivery confirmation...
-                    </p>
-                  )}
+        </header>        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="rounded-xl border border-[#e5e7eb] bg-white p-8 shadow-sm">
+            <h3 className="text-lg font-bold text-[#111827] mb-8">Tracking Details</h3>
+            <StatusTimeline currentStatus={realStatus} />
+            
+            {(realStatus === 'in_transit' || realStatus === 'arrived' || realStatus === 'delivered') && (
+              <div className="mt-10 pt-10 border-t border-[#f3f4f6]">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-sm font-bold text-[#111827]">Delivery Progress</span>
+                  <span className="text-sm font-medium text-[#00b14f]">
+                    {realStatus === 'delivered' ? '100%' : realStatus === 'arrived' ? '95%' : '60%'}
+                  </span>
                 </div>
-              )}
+                <div className="h-3 w-full bg-[#f3f4f6] rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-[#00b14f] transition-all duration-1000 ease-in-out rounded-full"
+                    style={{ width: realStatus === 'delivered' ? '100%' : realStatus === 'arrived' ? '95%' : '60%' }}
+                  />
+                </div>
+              </div>
+            )}
 
-              {realStatus === 'delivered' && (
-                <div className="mt-10 p-6 bg-[#00B14F]/10 border border-[#00B14F]/30 rounded-2xl fade-in">
-                  <div className="flex items-center gap-4">
-                    <div className="text-[#00B14F] animate-bounce">
-                      <Flag size={32} strokeWidth={2.5} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-[#111827]">Package Delivered!</h4>
-                      <p className="text-sm text-[#6b7280]">Your package has arrived at its destination.</p>
-                      <button 
-                        onClick={() => router.push('/dashboard')}
-                        className="mt-4 px-6 py-2 bg-[#00B14F] text-white rounded-xl font-bold hover:bg-[#009940] transition-all shadow-lg shadow-[#00B14F]/20"
-                      >
-                        Return to Home
-                      </button>
-                    </div>
+            {realStatus === 'delivered' && (
+              <div className="mt-10 p-6 bg-[#00B14F]/10 border border-[#00B14F]/30 rounded-2xl fade-in">
+                <div className="flex items-center gap-4">
+                  <div className="text-[#00B14F] animate-bounce">
+                    <Flag size={32} strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-[#111827]">Package Delivered!</h4>
+                    <p className="text-sm text-[#6b7280]">Your package has arrived at its destination.</p>
+                    <button 
+                      onClick={() => router.push('/dashboard')}
+                      className="mt-4 px-6 py-2 bg-[#00B14F] text-white rounded-xl font-bold hover:bg-[#009940] transition-all shadow-lg shadow-[#00B14F]/20"
+                    >
+                      Return to Home
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* Live Map Integration */}
-            <div className="rounded-xl border border-[#e5e7eb] bg-white shadow-sm overflow-hidden h-[400px] flex flex-col">
-              <div className="p-4 border-b border-[#e5e7eb] bg-gray-50">
-                <span className="text-sm font-bold text-[#111827]">Live Map Tracker</span>
               </div>
-              <div className="flex-1 w-full h-full relative z-0">
-                <Map 
-                  pickup={pickupCoords} 
-                  dropoff={dropoffCoords} 
-                  driver={realStatus === 'pending' ? null : driverCoords} 
-                  interactive={true} 
-                />
-              </div>
-            </div>
+            )}
           </div>
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mt-8">
           <div className="md:col-span-2 space-y-6">
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-[#9ca3af] uppercase tracking-widest px-1">Your Driver</h3>
