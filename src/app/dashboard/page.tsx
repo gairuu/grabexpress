@@ -112,10 +112,10 @@ export default function DashboardPage() {
         <section className="mt-6">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-base font-semibold text-[#111827]">Recent Deliveries ({deliveries.length})</h2>
-            {deliveries.some(d => d.delivery_status === 'delivered' || d.delivery_status === 'cancelled') && (
+            {deliveries.length > 0 && (
               <button 
                 onClick={async () => {
-                  if (confirm('Are you sure you want to clear your delivery history? This will remove all completed and cancelled deliveries.')) {
+                  if (confirm('Are you sure you want to clear your delivery history? This will remove all your deliveries from this list.')) {
                     try {
                       await clearDeliveries();
                     } catch (err: any) {
