@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { MapPin, Inbox } from 'lucide-react';
+import { MapPin, Inbox, Trash2 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -8,7 +8,7 @@ import Link from 'next/link';
 import DeliveryCard from '@/components/DeliveryCard';
 
 export default function DashboardPage() {
-  const { user, loading, deliveries } = useApp();
+  const { user, loading, deliveries, clearDeliveries } = useApp();
   const router = useRouter();
 
   useEffect(() => {
@@ -112,6 +112,19 @@ export default function DashboardPage() {
         <section className="mt-6">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-base font-semibold text-[#111827]">Recent Deliveries ({deliveries.length})</h2>
+            {deliveries.some(d => d.delivery_status === 'delivered' || d.delivery_status === 'cancelled') && (
+              <button 
+                onClick={async () => {
+                  if (confirm('Are you sure you want to clear your delivery history? This will remove all completed and cancelled deliveries.')) {
+                    await clearDeliveries();
+                  }
+                }}
+                className="flex items-center gap-1 text-sm font-medium text-[#6b7280] hover:text-red-500 transition-colors"
+              >
+                <Trash2 size={14} />
+                Clear History
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {deliveries.length > 0 ? (

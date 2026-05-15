@@ -21,6 +21,7 @@ interface AppContextType {
   findAvailableDriver: () => Promise<any>;
   setBooking: (b: Partial<BookingState>) => void;
   resetBooking: () => void;
+  clearDeliveries: () => Promise<void>;
 }
 
 const defaultBooking: BookingState = {
@@ -589,6 +590,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setBookingState((prev) => ({ ...prev, ...partial }));
   }, []);
 
+  const clearDeliveries = useCallback(async () => {
+    if (!user || user.role !== 'customer') return;
+
+    // Delete only completed or cancelled deliveries for this customer
+    const { error } = await supabase
+      .from('deliveries')
+      .delete()
+      .eq('customer_id', user.id)
+      .in('delivery_status', ['delivered', 'cancelled']);
+
+    if (error) {
+      console.error('Error clearing deliveries:', error.message);
+      throw new Error(`Clear failed: ${error.message}`);
+    }
+
+    await fetchDeliveries();
+  }, [user, fetchDeliveries]);
+
   const resetBooking = useCallback(() => {
     setBookingState(defaultBooking);
   }, []);
@@ -612,6 +631,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         findAvailableDriver,
         setBooking,
         resetBooking,
+        clearDeliveries,
       }}
     >
       {children}
