@@ -22,6 +22,9 @@ interface AppContextType {
   setBooking: (b: Partial<BookingState>) => void;
   resetBooking: () => void;
   clearDeliveries: () => Promise<void>;
+  confirmPayment: (deliveryId: string) => Promise<void>;
+  deleteUser: (userId: string) => Promise<void>;
+  updateUserProfile: (userId: string, updates: Partial<AppUser>) => Promise<void>;
 }
 
 const defaultBooking: BookingState = {
@@ -309,6 +312,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         item_weight: row.item_weight,
         item_type: row.item_type,
         vehicle_type: row.vehicle_type,
+        payment_status: row.payment_status || 'unpaid',
       }));
       setDeliveries(mapped);
     }
@@ -611,6 +615,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setBookingState(defaultBooking);
   }, []);
 
+  const confirmPayment = useCallback(async (deliveryId: string) => {
+    const { error } = await supabase
+      .from('deliveries')
+      .update({ payment_status: 'paid' })
+      .eq('id', deliveryId);
+
+    if (error) throw new Error(`Payment confirmation failed: ${error.message}`);
+    await fetchDeliveries();
+  }, [fetchDeliveries]);
+
+  const deleteUser = useCallback(async (userId: string) => {
+    if (user?.role !== 'admin') return;
+    const { error } = await supabase.from('profiles').delete().eq('id', userId);
+    if (error) throw new Error(`Delete failed: ${error.message}`);
+    // No need to fetch profile, but might need to fetch users list if we had one
+  }, [user]);
+
+  const updateUserProfile = useCallback(async (userId: string, updates: Partial<AppUser>) => {
+    if (user?.role !== 'admin' && user?.id !== userId) return;
+    const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
+    if (error) throw new Error(`Update failed: ${error.message}`);
+    if (user?.id === userId) {
+      const profile = await fetchProfile(userId);
+      setUser(profile);
+    }
+  }, [user, fetchProfile]);
+
   return (
     <AppContext.Provider
       value={{
@@ -631,6 +662,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setBooking,
         resetBooking,
         clearDeliveries,
+        confirmPayment,
+        deleteUser,
+        updateUserProfile,
       }}
     >
       {children}

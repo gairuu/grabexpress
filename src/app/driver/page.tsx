@@ -6,7 +6,7 @@ import StatusBadge from '@/components/StatusBadge';
 import ChatBox from '@/components/ChatBox';
 import { useApp } from '@/context/AppContext';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Clock, Truck, CheckCircle2, Package, MessageCircle } from 'lucide-react';
+import { Clock, Truck, CheckCircle2, Package, Bell, MapPin, X } from 'lucide-react';
 import StatsCard from '@/components/StatsCard';
 import { supabase } from '@/lib/supabase';
 
@@ -224,89 +224,187 @@ export default function DriverDashboardPage() {
             ⚠️ {actionError}
           </div>
         )}
-        <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <StatsCard icon={Clock} label="Pending Pickups" value={stats.pending} />
-          <StatsCard icon={Truck} label="In Transit" value={stats.active} color="#3B82F6" />
-          <StatsCard icon={CheckCircle2} label="Completed" value={stats.completed} color="#00B14F" />
-        </section>
-
-        <section className="rounded-xl border border-[#e5e7eb] bg-white shadow-sm">
-          <div className="border-b border-[#e5e7eb] px-5 py-4">
-            <h2 className="text-base font-semibold text-[#111827]">Assigned Deliveries</h2>
+        {actionError && (
+          <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700 font-medium">
+            ⚠️ {actionError}
           </div>
+        )}
 
-          <div className="divide-y divide-[#e5e7eb]">
-            {myJobs.length === 0 ? (
-              <div className="px-5 py-10 text-center text-sm text-[#9ca3af]">
-                No assigned deliveries yet.
+        {/* Incoming Job Modal */}
+        {incomingJob && myJobs.length === 0 && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in zoom-in duration-300">
+            <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+              <div className="bg-[#00B14F] p-6 text-white text-center relative">
+                <div className="absolute top-4 right-4">
+                  <button onClick={() => setIncomingJob(null)} className="p-1 hover:bg-white/20 rounded-full transition-colors">
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+                  <Bell size={32} />
+                </div>
+                <h2 className="text-xl font-bold">New Delivery Available!</h2>
+                <p className="text-white/80 text-sm">Action required: Accept or decline job</p>
               </div>
-            ) : (
-              myJobs.map((job) => (
-                <div 
-                  key={job.id} 
-                  className={`px-5 py-4 cursor-pointer transition-all border-l-4 ${
-                    selectedDeliveryId === job.id ? 'bg-green-50 border-[var(--grab-green)]' : 'hover:bg-gray-50 border-transparent'
-                  }`} 
-                  onClick={() => setSelectedDeliveryId(job.id)}
-                >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div className="flex-1">
-                      <div className="mb-1 flex items-center gap-3">
-                        <span className="font-mono text-[10px] text-[#9ca3af]">#{job.id.slice(0, 8).toUpperCase()}</span>
-                        <StatusBadge status={job.delivery_status} size="sm" />
-                      </div>
-                      <div className="text-sm font-bold text-[#111827] line-clamp-1">
-                        {job.pickup_location.split(',')[0]} &rarr; {job.dropoff_location.split(',')[0]}
-                      </div>
-                      <div className="mt-1 text-[11px] text-[#6b7280]">
-                        <span className="font-semibold text-gray-700">Customer:</span> {job.customer_name} · {formatDate(job.booking_time)}
-                      </div>
+              <div className="p-8 space-y-6">
+                <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <div className="w-2 h-2 rounded-full bg-[#00B14F] mt-1.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase font-bold">Pickup</p>
+                      <p className="text-sm font-medium text-gray-900 line-clamp-1">{incomingJob.pickup_location}</p>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className={`p-2 rounded-lg border transition-colors ${selectedDeliveryId === job.id ? 'bg-[var(--grab-green)] text-white border-[var(--grab-green)]' : 'bg-white text-gray-300 border-gray-100'}`}
-                      >
-                        <Package size={16} />
-                      </div>
-
-                      {job.delivery_status === 'pending' && (
-                        <>
-                          <button
-                            className="rounded-md bg-[#00B14F] px-3 py-2 text-xs font-semibold text-white hover:bg-[#009940] disabled:opacity-60"
-                            disabled={loadingId === job.id}
-                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(job.id, 'in_transit'); }}
-                          >
-                            {loadingId === job.id ? 'Updating...' : 'Start Delivery'}
-                          </button>
-                        </>
-                      )}
-                      {job.delivery_status === 'in_transit' && (
-                        <>
-                          <button
-                            className="rounded-md bg-[var(--grab-green)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--grab-green-dark)] disabled:opacity-60"
-                            disabled={loadingId === job.id}
-                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(job.id, 'delivered'); }}
-                          >
-                            {loadingId === job.id ? 'Updating...' : 'Mark Delivered'}
-                          </button>
-                        </>
-                      )}
-                      
-                      <button
-                        className="rounded-md border border-[#e5e7eb] px-3 py-2 text-xs font-semibold text-[#6b7280] hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors disabled:opacity-60"
-                        disabled={loadingId === job.id}
-                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate(job.id, 'cancelled'); }}
-                      >
-                        Cancel
-                      </button>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="w-2 h-2 rounded bg-red-400 mt-1.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase font-bold">Drop-off</p>
+                      <p className="text-sm font-medium text-gray-900 line-clamp-1">{incomingJob.dropoff_location}</p>
                     </div>
                   </div>
                 </div>
-              ))
-            )}
+
+                <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+                  <span className="text-2xl font-black text-[#00B14F]">{formatCurrency(incomingJob.delivery_fee)}</span>
+                  <span className="text-xs font-bold text-gray-400 uppercase">{incomingJob.vehicle_type}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => setIncomingJob(null)}
+                    className="py-4 rounded-xl border border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition-colors"
+                  >
+                    Decline
+                  </button>
+                  <button 
+                    onClick={handleAcceptJob}
+                    className="py-4 rounded-xl bg-[#00B14F] text-white font-bold hover:bg-[#009940] transition-colors shadow-lg shadow-[#00B14F]/20"
+                  >
+                    Accept Job
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </section>
+        )}
+
+        {/* ACTIVE MISSION MODE: If driver has an active job, lock them into it */}
+        {myJobs.length > 0 ? (
+          <div className="space-y-6">
+            <div className="bg-[#111827] rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#00B14F]/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="bg-[#00B14F] p-2 rounded-xl">
+                    <Truck size={24} />
+                  </div>
+                  <h2 className="text-xl font-bold tracking-tight">Active Mission In Progress</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex gap-4">
+                        <div className="w-2 h-2 rounded-full bg-[#00B14F] mt-1.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Pickup</p>
+                          <p className="text-lg font-medium">{myJobs[0].pickup_location}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4">
+                        <div className="w-2 h-2 rounded bg-red-400 mt-1.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Drop-off</p>
+                          <p className="text-lg font-medium">{myJobs[0].dropoff_location}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-6 border-t border-white/10 flex flex-wrap gap-4">
+                       <div className="bg-white/5 rounded-2xl px-5 py-3 border border-white/10">
+                          <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Fee</p>
+                          <p className="text-xl font-black text-[#00B14F]">{formatCurrency(myJobs[0].delivery_fee)}</p>
+                       </div>
+                       <div className="bg-white/5 rounded-2xl px-5 py-3 border border-white/10">
+                          <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Status</p>
+                          <StatusBadge status={myJobs[0].delivery_status} />
+                       </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col justify-end space-y-4">
+                    {myJobs[0].delivery_status === 'pending' ? (
+                      <button 
+                        onClick={() => handleStatusUpdate(myJobs[0].id, 'in_transit')}
+                        className="w-full py-5 bg-[#00B14F] text-white rounded-2xl font-black text-lg hover:bg-[#009940] transition-all shadow-xl shadow-[#00B14F]/20"
+                        disabled={loadingId === myJobs[0].id}
+                      >
+                        {loadingId === myJobs[0].id ? 'Processing...' : 'START DELIVERY'}
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => handleStatusUpdate(myJobs[0].id, 'delivered')}
+                        className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20"
+                        disabled={loadingId === myJobs[0].id}
+                      >
+                        {loadingId === myJobs[0].id ? 'Processing...' : 'MARK AS DELIVERED'}
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => handleStatusUpdate(myJobs[0].id, 'cancelled')}
+                      className="w-full py-3 text-white/40 text-sm font-bold hover:text-red-400 transition-colors"
+                      disabled={loadingId === myJobs[0].id}
+                    >
+                      Emergency Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-center gap-3 text-gray-400 text-sm italic">
+               <Bell size={14} />
+               You must finish your current job before accepting new requests.
+            </div>
+          </div>
+        ) : (
+          /* JOB SEARCH MODE: Stats and idle state */
+          <div className="space-y-6">
+            <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <StatsCard icon={Clock} label="Pending Pickups" value={stats.pending} />
+              <StatsCard icon={Truck} label="In Transit" value={stats.active} color="#3B82F6" />
+              <StatsCard icon={CheckCircle2} label="Completed Today" value={stats.completed} color="#00B14F" />
+            </section>
+
+            <div className="rounded-3xl border-2 border-dashed border-gray-200 bg-white p-20 text-center space-y-4">
+              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300">
+                {driverStatus === 'available' ? (
+                  <div className="animate-ping w-8 h-8 bg-green-400 rounded-full opacity-75"></div>
+                ) : (
+                  <Clock size={40} strokeWidth={1.5} />
+                )}
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {driverStatus === 'available' ? 'Searching for jobs...' : 'You are currently Offline'}
+                </h3>
+                <p className="text-gray-500 max-w-sm mx-auto mt-2">
+                  {driverStatus === 'available' 
+                    ? 'Stay on this page to receive real-time delivery alerts for your vehicle type.' 
+                    : 'Switch your status to Online to start receiving delivery requests.'}
+                </p>
+              </div>
+              {driverStatus === 'offline' && (
+                <button 
+                  onClick={toggleAvailability}
+                  className="mt-6 px-8 py-3 bg-[#00B14F] text-white rounded-xl font-bold hover:bg-[#009940] transition-all"
+                >
+                  Go Online
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         {selectedDelivery && (
           <ChatBox 
             deliveryId={selectedDelivery.id} 

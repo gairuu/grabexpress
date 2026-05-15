@@ -72,6 +72,7 @@ export default function TrackingByIdPage() {
           item_weight: data.item_weight,
           item_type: data.item_type,
           vehicle_type: data.vehicle_type,
+          payment_status: data.payment_status || 'unpaid',
         };
         setDelivery(mapped);
         hasFetchedRef.current = true;
@@ -133,6 +134,7 @@ export default function TrackingByIdPage() {
             item_weight: data.item_weight,
             item_type: data.item_type,
             vehicle_type: data.vehicle_type,
+            payment_status: data.payment_status || 'unpaid',
           };
           setDelivery(mapped);
           setIsVerifying(false);
@@ -353,12 +355,21 @@ export default function TrackingByIdPage() {
               </div>
             </div>
 
-            {realStatus === 'delivered' && (
+            {realStatus === 'delivered' && delivery?.payment_status === 'unpaid' && (
               <button
                 onClick={() => router.push(`/payment/${params.deliveryId}`)}
                 className="btn-primary py-4 text-lg font-bold grab-glow w-full fade-in"
               >
-                Proceed to Payment
+                Complete Payment
+              </button>
+            )}
+
+            {realStatus === 'delivered' && delivery?.payment_status === 'paid' && (
+              <button
+                onClick={() => router.push(`/dashboard`)}
+                className="w-full py-4 text-[#00B14F] font-bold border-2 border-[#00B14F] rounded-xl hover:bg-[#00B14F]/5 transition-all fade-in"
+              >
+                Back to Dashboard
               </button>
             )}
           </div>

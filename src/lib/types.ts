@@ -58,6 +58,7 @@ export interface Delivery {
   driver_rating?: number;
   customer_review?: string;
   broadcast_status?: 'searching' | 'matched' | 'timeout' | 'none';
+  payment_status: 'unpaid' | 'paid';
 }
 
 export interface BookingState {

@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabase';
 
 export default function PaymentByIdPage() {
   const router = useRouter();
-  const { user, loading, resetBooking, booking } = useApp();
+  const { user, loading, resetBooking, booking, confirmPayment } = useApp();
   const params = useParams<{ deliveryId: string }>();
   const [delivery, setDelivery] = useState<Delivery | null>(null);
   const [method, setMethod] = useState<PaymentMethod>('cash');
@@ -107,7 +107,9 @@ export default function PaymentByIdPage() {
           item_size: data.item_size,
           item_weight: data.item_weight,
           item_type: data.item_type,
+          item_type: data.item_type,
           vehicle_type: data.vehicle_type,
+          payment_status: data.payment_status || 'unpaid',
         } as Delivery);
       } catch (err) {
         console.error("Payment: Unexpected error during fetch", err);
@@ -133,35 +135,25 @@ export default function PaymentByIdPage() {
     setIsProcessing(true);
     setError('');
 
-    // 1. If method is already correct, just proceed immediately
-    if (delivery.payment_method === method) {
-      setIsPaid(true);
-      setIsProcessing(false);
-      return;
-    }
-
-    // 2. Optimistic Update: Show success immediately to the user
-    // This prevents database hangs from ruining the UX
-    setIsPaid(true);
-    setIsProcessing(false);
-
-    // 3. Fire the database update in the background (don't await it)
-    (async () => {
-      try {
-        const { error: updateError } = await supabase
+    try {
+      // 1. If method changed, update it first
+      if (delivery.payment_method !== method) {
+        await supabase
           .from('deliveries')
           .update({ payment_method: method })
           .eq('id', delivery.id);
-
-        if (updateError) {
-          console.error('Background payment update failed:', updateError);
-        } else {
-          console.log('Background payment update successful');
-        }
-      } catch (err) {
-        console.error('Background payment update crash:', err);
       }
-    })();
+
+      // 2. Confirm the payment status
+      await confirmPayment(delivery.id);
+
+      setIsPaid(true);
+    } catch (err: any) {
+      console.error('Payment failure:', err);
+      setError('Payment recording failed. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const methodLabels = {
