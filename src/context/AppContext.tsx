@@ -523,7 +523,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             sender_phone: deliveryData.sender_phone,
             recipient_name: deliveryData.recipient_name,
             recipient_phone: deliveryData.recipient_phone,
-            booking_time: new Date().toISOString()
+            booking_time: new Date().toISOString(),
+            payment_status: 'unpaid'
           })
           .select('id')
           .single();

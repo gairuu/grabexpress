@@ -50,6 +50,7 @@ export default function MatchingPage() {
           item_weight: booking.item_weight,
           item_type: booking.item_type,
           vehicle_type: booking.vehicle_type,
+          payment_status: 'unpaid',
         });
 
         setCreatedDeliveryId(deliveryId);
