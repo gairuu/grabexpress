@@ -108,7 +108,6 @@ export default function PaymentByIdPage() {
           item_size: data.item_size,
           item_weight: data.item_weight,
           item_type: data.item_type,
-          item_type: data.item_type,
           vehicle_type: data.vehicle_type,
           payment_status: data.payment_status || 'unpaid',
         } as Delivery);
