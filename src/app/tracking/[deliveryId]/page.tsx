@@ -365,7 +365,7 @@ export default function TrackingByIdPage() {
               </div>
             )}
 
-            {(realStatus === 'arrived' || (realStatus === 'in_transit' && delivery?.payment_status === 'unpaid')) && (
+            {realStatus === 'arrived' && delivery?.payment_status === 'unpaid' && (
               <button
                 onClick={() => router.push(`/payment/${params.deliveryId}`)}
                 className="btn-primary py-4 text-lg font-bold grab-glow w-full mb-6"
