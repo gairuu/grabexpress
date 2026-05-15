@@ -527,11 +527,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
             payment_status: 'unpaid',
             broadcast_status: 'matched'
           })
-          .select('id')
+          .select()
           .single();
 
         if (deliveryError) throw new Error(`Booking failed: ${deliveryError.message}`);
 
+        // IMMEDIATELY mark driver as busy
         await supabase.from('drivers').update({ status: 'busy' }).eq('id', driver.id);
 
         fetchDeliveries();

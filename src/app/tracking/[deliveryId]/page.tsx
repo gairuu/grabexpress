@@ -307,6 +307,12 @@ export default function TrackingByIdPage() {
                     <div>
                       <h4 className="font-bold text-[#111827]">Package Delivered!</h4>
                       <p className="text-sm text-[#6b7280]">Your package has arrived at its destination.</p>
+                      <button 
+                        onClick={() => router.push('/dashboard')}
+                        className="mt-4 px-6 py-2 bg-[#00B14F] text-white rounded-xl font-bold hover:bg-[#009940] transition-all shadow-lg shadow-[#00B14F]/20"
+                      >
+                        Return to Home
+                      </button>
                     </div>
                   </div>
                 </div>
