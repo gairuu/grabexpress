@@ -24,6 +24,10 @@ export default function BookDeliveryPage() {
   const [dropoff, setDropoff] = useState('');
   const [pickupCoords, setPickupCoords] = useState<[number, number] | null>(null);
   const [dropoffCoords, setDropoffCoords] = useState<[number, number] | null>(null);
+  const [pickupProvince, setPickupProvince] = useState<string | null>(null);
+  const [dropoffProvince, setDropoffProvince] = useState<string | null>(null);
+  const [pickupCountry, setPickupCountry] = useState<string | null>(null);
+  const [dropoffCountry, setDropoffCountry] = useState<string | null>(null);
 
   // Suggestion state
   const [pickupSuggestions, setPickupSuggestions] = useState<any[]>([]);
@@ -53,18 +57,24 @@ export default function BookDeliveryPage() {
     }
   }, [user, router, loading]);
 
-  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+  const reverseGeocode = async (lat: number, lng: number): Promise<{address: string, province: string | null, country: string | null}> => {
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
       const data = await res.json();
       if (data && data.display_name) {
         const parts = data.display_name.split(',');
-        return parts.slice(0, 3).join(',').trim(); 
+        const province = data.address.province || data.address.state || data.address.region || data.address.county || null;
+        const country = data.address.country || null;
+        return { 
+          address: parts.slice(0, 3).join(',').trim(), 
+          province,
+          country
+        }; 
       }
     } catch (e) {
       console.warn('Reverse geocoding failed', e);
     }
-    return `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+    return { address: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`, province: null, country: null };
   };
 
   const fetchSuggestions = async (query: string) => {
@@ -104,15 +114,21 @@ export default function BookDeliveryPage() {
     const lat = parseFloat(suggestion.lat);
     const lon = parseFloat(suggestion.lon);
     const address = suggestion.display_name.split(',').slice(0, 3).join(',').trim();
+    const province = suggestion.address.province || suggestion.address.state || suggestion.address.region || suggestion.address.county || null;
+    const country = suggestion.address.country || null;
 
     if (type === 'pickup') {
       setPickup(address);
       setPickupCoords([lat, lon]);
+      setPickupProvince(province);
+      setPickupCountry(country);
       setPickupSuggestions([]);
       setActiveInput(null);
     } else {
       setDropoff(address);
       setDropoffCoords([lat, lon]);
+      setDropoffProvince(province);
+      setDropoffCountry(country);
       setDropoffSuggestions([]);
       setActiveInput(null);
     }
@@ -123,20 +139,28 @@ export default function BookDeliveryPage() {
     if (!pickupCoords) {
       setPickupCoords([lat, lng]);
       setPickup('Locating...');
-      const address = await reverseGeocode(lat, lng);
-      setPickup(address);
+      const result = await reverseGeocode(lat, lng);
+      setPickup(result.address);
+      setPickupProvince(result.province);
+      setPickupCountry(result.country);
     } else if (!dropoffCoords) {
       setDropoffCoords([lat, lng]);
       setDropoff('Locating...');
-      const address = await reverseGeocode(lat, lng);
-      setDropoff(address);
+      const result = await reverseGeocode(lat, lng);
+      setDropoff(result.address);
+      setDropoffProvince(result.province);
+      setDropoffCountry(result.country);
     } else {
       setPickupCoords([lat, lng]);
       setPickup('Locating...');
-      const address = await reverseGeocode(lat, lng);
-      setPickup(address);
+      const result = await reverseGeocode(lat, lng);
+      setPickup(result.address);
+      setPickupProvince(result.province);
+      setPickupCountry(result.country);
       setDropoffCoords(null);
       setDropoff('');
+      setDropoffProvince(null);
+      setDropoffCountry(null);
     }
   };
 
@@ -155,17 +179,28 @@ export default function BookDeliveryPage() {
         return;
       }
 
-      // Simple keyword check for major regions to be extra safe
-      const lowerPickup = pickup.toLowerCase();
-      const lowerDropoff = dropoff.toLowerCase();
-      const regions = ['cebu', 'manila', 'davao', 'iloilo', 'bacolod'];
+      // GLOBAL REGION GUARD: Prevent inter-island/impossible land deliveries worldwide
+      const c1 = pickupCountry || '';
+      const c2 = dropoffCountry || '';
+      const p1 = pickupProvince?.toLowerCase() || '';
+      const p2 = dropoffProvince?.toLowerCase() || '';
+
+      // 1. Country Check
+      if (c1 !== c2) {
+        setError(`International Delivery Blocked: Pickup is in ${c1} but Drop-off is in ${c2}. Land vehicles cannot cross national borders.`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
       
-      for (const region of regions) {
-        if (lowerPickup.includes(region) && !lowerDropoff.includes(region)) {
-          setError(`Delivery must be within the same region. You cannot book from ${region} to another province.`);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return;
-        }
+      // 2. Region/Province Check
+      const isMetroManila = (p: string) => 
+        p.includes('manila') || p.includes('ncr') || p.includes('capital region') || 
+        p.includes('quezon city') || p.includes('makati') || p.includes('pasig');
+      
+      if (p1 !== p2 && !(isMetroManila(p1) && isMetroManila(p2))) {
+        setError(`Service Boundary Error: You can only deliver within the same region (${pickupProvince || 'Your Region'}). Pickup: ${p1}, Drop-off: ${p2}.`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
       }
     }
 
