@@ -11,7 +11,7 @@ import { DeliveryStatus, Delivery } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 
 export default function TrackingByIdPage() {
-  const { user, loading } = useApp();
+  const { booking, user, loading } = useApp();
   const params = useParams<{ deliveryId: string }>();
   const router = useRouter();
   
@@ -20,7 +20,6 @@ export default function TrackingByIdPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const hasFetchedRef = useRef(false);
 
-  const realStatus = delivery?.delivery_status || 'pending';
 
   const fetchCurrentStatus = async () => {
     if (!params.deliveryId) return;
